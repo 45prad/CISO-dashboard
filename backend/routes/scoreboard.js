@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/',  async (req, res) => {
   try {
     // Get all users
-    const users = await User.find().select('name email role');
+    const users = await User.find({role:'user'}).select('name email role');
     
     // Get all submissions grouped by user
     const submissions = await Submission.aggregate([

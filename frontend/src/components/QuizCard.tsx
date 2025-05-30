@@ -59,7 +59,7 @@ const QuizCard: React.FC<QuizCardProps> = ({ quiz, hasAttempted = false, userVie
             } transition-colors`}
             onClick={(e) => !quiz.isActive && !hasAttempted && e.preventDefault()}
           >
-            {hasAttempted ? 'View Results' : (quiz.isActive ? 'Take Quiz' : 'Quiz Not Active')}
+            {hasAttempted ? 'View Results' : (quiz.isActive ? 'Engage' : 'Scenario Not Active')}
             {(hasAttempted || quiz.isActive) && <ArrowRight size={18} className="ml-1" />}
           </Link>
         ) : (

@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, CheckCircle, AlertTriangle, Play, Pause, EyeOff, Eye } from 'lucide-react';
+import { ArrowLeft, Users, CheckCircle, AlertTriangle, Play, Pause, EyeOff, Eye, ArrowRight } from 'lucide-react';
 import axios from 'axios';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AdminHeader from '../../components/AdminHeader';
 import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const QuizMonitor = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
-  const [summaryData, setSummaryData] = useState([]);
   const { id } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -23,52 +22,12 @@ const QuizMonitor = () => {
   });
   
   const { user } = useContext(AuthContext);
-  const { 
-    socket, 
-    joinQuizRoom, 
-    adminActivateQuiz, 
-    adminDeactivateQuiz,
-    adminShowImpact,
-    adminShowMitigation,
-    adminShowSummary
-  } = useContext(SocketContext);
-  
+  const { socket, joinQuizRoom } = useContext(SocketContext);
   const navigate = useNavigate();
 
-  
-// Add this function to fetch summary data
-const fetchSummaryData = async () => {
-  try {
-    const { data } = await axios.get(`${backendUrl}/api/submissions/summary/${id}`);
-    setSummaryData(data);
-  } catch (err) {
-    console.error('Failed to fetch summary data:', err);
-  }
-};
-
-// Add this toggle function
-const toggleSummary = async () => {
-  try {
-    const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/summary`);
-    
-    setQuiz({
-      ...quiz,
-      showSummary: data.showSummary
-    });
-    
-    if (data.showSummary) {
-      await fetchSummaryData();
-      adminShowSummary(id);
-    }
-  } catch (err) {
-    setError(err.response?.data?.message || 'Failed to toggle summary visibility');
-  }
-};
-  
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch quiz, submissions, and users in parallel
         const [quizRes, submissionsRes, usersRes] = await Promise.all([
           axios.get(`${backendUrl}/api/quizzes/${id}`),
           axios.get(`${backendUrl}/api/submissions/quiz/${id}`),
@@ -79,7 +38,6 @@ const toggleSummary = async () => {
         setSubmissions(submissionsRes.data);
         setUsers(usersRes.data);
         
-        // Calculate stats
         const assignedUsers = quizRes.data.assignedUsers ? quizRes.data.assignedUsers.length : 0;
         const submittedCount = submissionsRes.data.length;
         
@@ -98,104 +56,86 @@ const toggleSummary = async () => {
     
     fetchData();
     
-    // Join socket room
     if (socket) {
       joinQuizRoom(id);
     }
-    
-    // Cleanup on unmount
-    return () => {
-      // Nothing to cleanup yet
-    };
   }, [id, socket, joinQuizRoom]);
-  
-  // Listen for socket events
-  useEffect(() => {
-    if (!socket) return;
-    
-    // Update room info when users join/leave
-    const handleRoomUpdate = (data) => {
-      setStats(prev => ({
-        ...prev,
-        waitingUsers: data.userCount
-      }));
-    };
-    
-    socket.on('roomUpdate', handleRoomUpdate);
-    
-    return () => {
-      socket.off('roomUpdate', handleRoomUpdate);
-    };
-  }, [socket]);
-  
+
   const toggleQuizActive = async () => {
     try {
       if (quiz.isActive) {
-        // Deactivate quiz
         await axios.put(`${backendUrl}/api/quizzes/${id}/deactivate`);
-        adminDeactivateQuiz(id);
       } else {
-        // Activate quiz
         await axios.put(`${backendUrl}/api/quizzes/${id}/activate`);
-        adminActivateQuiz(id);
       }
       
-      // Update local state
       setQuiz({
         ...quiz,
-        isActive: !quiz.isActive,
-        showImpact: false,
-        showMitigation: false
+        isActive: !quiz.isActive
       });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update quiz status');
     }
   };
-  
-  const toggleImpact = async () => {
+
+  const showQuestion = async () => {
     try {
-      const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/impact`);
-      
-      // Update local state
-      setQuiz({
-        ...quiz,
-        showImpact: data.showImpact
-      });
-      
-      // Emit socket event to show impact
-      if (data.showImpact) {
-        adminShowImpact(id);
-      }
+      await axios.put(`${backendUrl}/api/quizzes/${id}/question/${quiz.currentQuestionIndex}/show`);
+      socket.emit('showQuestion', { quizId: id, questionIndex: quiz.currentQuestionIndex });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to toggle impact visibility');
+      setError(err.response?.data?.message || 'Failed to show question');
     }
   };
-  
-  const toggleMitigation = async () => {
+
+  const showOptions = async () => {
     try {
-      const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/mitigation`);
-      
-      // Update local state
-      setQuiz({
-        ...quiz,
-        showMitigation: data.showMitigation
-      });
-      
-      // Emit socket event to show mitigation
-      if (data.showMitigation) {
-        adminShowMitigation(id);
-      }
+      await axios.put(`${backendUrl}/api/quizzes/${id}/question/${quiz.currentQuestionIndex}/options`);
+      socket.emit('showOptions', { quizId: id, questionIndex: quiz.currentQuestionIndex });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to toggle mitigation visibility');
+      setError(err.response?.data?.message || 'Failed to show options');
     }
   };
-  
-  // Get user name by ID
-  const getUserName = (userId) => {
-    const user = users.find(u => u._id === userId);
-    return user ? user.name : 'Unknown User';
+
+  const showQuestionSummary = async () => {
+    try {
+      await axios.put(`${backendUrl}/api/quizzes/${id}/question/${quiz.currentQuestionIndex}/summary`);
+      socket.emit('showQuestionSummary', { quizId: id, questionIndex: quiz.currentQuestionIndex });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to show summary');
+    }
   };
-  
+
+  const showQuestionImpact = async () => {
+    try {
+      await axios.put(`${backendUrl}/api/quizzes/${id}/question/${quiz.currentQuestionIndex}/impact`);
+      socket.emit('showQuestionImpact', { quizId: id, questionIndex: quiz.currentQuestionIndex });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to show impact');
+    }
+  };
+
+  const showQuestionMitigation = async () => {
+    try {
+      await axios.put(`${backendUrl}/api/quizzes/${id}/question/${quiz.currentQuestionIndex}/mitigation`);
+      socket.emit('showQuestionMitigation', { quizId: id, questionIndex: quiz.currentQuestionIndex });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to show mitigation');
+    }
+  };
+
+  const nextQuestion = async () => {
+    try {
+      await axios.put(`${backendUrl}/api/quizzes/${id}/nextQuestion`);
+      socket.emit('nextQuestion', { quizId: id });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to move to next question');
+    }
+  };
+
+  const getCurrentQuestion = () => {
+    return quiz?.questions[quiz.currentQuestionIndex];
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -208,25 +148,9 @@ const toggleSummary = async () => {
       </div>
     );
   }
-  
-  if (!quiz) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminHeader />
-        <div className="container mx-auto px-4 py-6">
-          <div className="bg-red-100 text-red-700 p-4 rounded-md">
-            Scenario not found
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  const labeledSummaryData = summaryData.map((item, index) => ({
-  ...item,
-  shortLabel: String.fromCharCode(65 + index), // A, B, C, D, ...
-}));
-  
+  const currentQuestion = getCurrentQuestion();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader />
@@ -244,14 +168,14 @@ const toggleSummary = async () => {
             <p className="text-gray-600 mt-1">{quiz.title}</p>
           </div>
         </div>
-        
+
         {error && (
           <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
             {error}
           </div>
         )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <Users size={24} className="text-blue-600 mr-2" />
@@ -263,53 +187,20 @@ const toggleSummary = async () => {
                 <span className="font-semibold">{stats.totalAssigned}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Submissions:</span>
-                <span className="font-semibold">{stats.totalSubmitted}</span>
+                <span className="text-gray-600">Current Question:</span>
+                <span className="font-semibold">{quiz.currentQuestionIndex + 1} of {quiz.questions.length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Waiting Room:</span>
                 <span className="font-semibold">{stats.waitingUsers}</span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full mt-2">
-                <div 
-                  className="h-2 bg-blue-600 rounded-full" 
-                  style={{ width: `${stats.totalAssigned ? (stats.totalSubmitted / stats.totalAssigned) * 100 : 0}%` }}
-                ></div>
-              </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <AlertTriangle size={24} className="text-orange-500 mr-2" />
-              <h2 className="text-lg font-semibold">Scenario Status</h2>
-            </div>
-            <div className="flex flex-col space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Status:</span>
-                <span className={`font-semibold ${quiz.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                  {quiz.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Show Impact:</span>
-                <span className={`font-semibold ${quiz.showImpact ? 'text-green-600' : 'text-red-600'}`}>
-                  {quiz.showImpact ? 'Visible' : 'Hidden'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Show Kinematic Actions:</span>
-                <span className={`font-semibold ${quiz.showMitigation ? 'text-green-600' : 'text-red-600'}`}>
-                  {quiz.showMitigation ? 'Visible' : 'Hidden'}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <CheckCircle size={24} className="text-green-600 mr-2" />
-              <h2 className="text-lg font-semibold">Controls</h2>
+              <h2 className="text-lg font-semibold">Question Controls</h2>
             </div>
             <div className="flex flex-col space-y-3">
               <button
@@ -323,241 +214,119 @@ const toggleSummary = async () => {
                 {quiz.isActive ? (
                   <>
                     <Pause size={18} className="mr-2" />
-                    Deactivate Scenario
+                    End Scenario
                   </>
                 ) : (
                   <>
                     <Play size={18} className="mr-2" />
-                    Activate Scenario
+                    Start Scenario
                   </>
                 )}
               </button>
 
-              <button
-  onClick={toggleSummary}
-  disabled={!quiz.isActive}
-  className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-    !quiz.isActive 
-      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      : quiz.showSummary
-        ? 'bg-indigo-200 text-indigo-800 hover:bg-indigo-300'
-        : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-  } transition-colors`}
->
-  {quiz.showSummary ? (
-    <>
-      <EyeOff size={18} className="mr-2" />
-      Hide Summary
-    </>
-  ) : (
-    <>
-      <Eye size={18} className="mr-2" />
-      Show Summary
-    </>
-  )}
-</button>
+              {quiz.isActive && currentQuestion && (
+                <>
+                  <button
+                    onClick={showQuestion}
+                    disabled={currentQuestion.isVisible}
+                    className={`w-full py-2 px-4 rounded-md ${
+                      currentQuestion.isVisible
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    Show Question
+                  </button>
 
-              
-              <button
-                onClick={toggleImpact}
-                disabled={!quiz.isActive}
-                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-                  !quiz.isActive 
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : quiz.showImpact
-                      ? 'bg-orange-200 text-orange-800 hover:bg-orange-300'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                } transition-colors`}
-              >
-                {quiz.showImpact ? (
-                  <>
-                    <EyeOff size={18} className="mr-2" />
-                    Hide Impact
-                  </>
-                ) : (
-                  <>
-                    <Eye size={18} className="mr-2" />
+                  <button
+                    onClick={showOptions}
+                    disabled={!currentQuestion.isVisible || currentQuestion.optionsVisible}
+                    className={`w-full py-2 px-4 rounded-md ${
+                      !currentQuestion.isVisible || currentQuestion.optionsVisible
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                  >
+                    Show Options
+                  </button>
+
+                  <button
+                    onClick={showQuestionSummary}
+                    disabled={!currentQuestion.optionsVisible || currentQuestion.showSummary}
+                    className={`w-full py-2 px-4 rounded-md ${
+                      !currentQuestion.optionsVisible || currentQuestion.showSummary
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                    }`}
+                  >
+                    Show Summary
+                  </button>
+
+                  <button
+                    onClick={showQuestionImpact}
+                    disabled={!currentQuestion.showSummary || currentQuestion.showImpact}
+                    className={`w-full py-2 px-4 rounded-md ${
+                      !currentQuestion.showSummary || currentQuestion.showImpact
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-orange-600 hover:bg-orange-700 text-white'
+                    }`}
+                  >
                     Show Impact
-                  </>
-                )}
-              </button>
-              
-              <button
-                onClick={toggleMitigation}
-                disabled={!quiz.isActive || !quiz.showImpact}
-                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-                  !quiz.isActive || !quiz.showImpact
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : quiz.showMitigation
-                      ? 'bg-purple-200 text-purple-800 hover:bg-purple-300'
-                      : 'bg-teal-600 hover:bg-teal-700 text-white'
-                } transition-colors`}
-              >
-                {quiz.showMitigation ? (
-                  <>
-                    <EyeOff size={18} className="mr-2" />
-                    Hide Kinematic Actions
-                  </>
-                ) : (
-                  <>
-                    <Eye size={18} className="mr-2" />
-                    Show Kinematic Actions
-                  </>
-                )}
-              </button>
+                  </button>
+
+                  <button
+                    onClick={showQuestionMitigation}
+                    disabled={!currentQuestion.showImpact || currentQuestion.showMitigation}
+                    className={`w-full py-2 px-4 rounded-md ${
+                      !currentQuestion.showImpact || currentQuestion.showMitigation
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    Show Mitigation
+                  </button>
+
+                  {quiz.currentQuestionIndex < quiz.questions.length - 1 && (
+                    <button
+                      onClick={nextQuestion}
+                      disabled={!currentQuestion.showMitigation}
+                      className={`w-full py-2 px-4 rounded-md ${
+                        !currentQuestion.showMitigation
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                      }`}
+                    >
+                      Next Question
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
-{/* {quiz.showSummary && summaryData.length > 0 && (
-  <div className="bg-white rounded-2xl shadow-lg p-6 mt-6 border border-gray-200">
-    <h3 className="text-xl font-bold mb-4 text-gray-700">Quiz Summary</h3>
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={labeledSummaryData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="shortLabel"
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                    <p className="text-sm font-semibold">{payload[0].payload.optionText}</p>
-                    <p className="text-sm text-gray-600">Count: {payload[0].value}</p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Legend />
-          <Bar
-            dataKey="count"
-            fill="#6366F1"
-            name="Selected Count"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-)} */}
-{quiz.showSummary && summaryData.length > 0 && (
-  <div className="bg-white rounded-2xl shadow-lg p-6 mt-6 border border-gray-200">
-    <h3 className="text-xl font-bold mb-4 text-gray-700">Scenario Summary</h3>
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={labeledSummaryData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="shortLabel"
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                    <p className="text-sm font-semibold">{payload[0].payload.optionText}</p>
-                    <p className="text-sm text-gray-600">Count: {payload[0].value}</p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Legend />
-          <Bar
-            dataKey="count"
-            fill="#6366F1"
-            name="Selected Count"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
 
-    {/* A: Text of Option A, etc. */}
-    <div className="mt-4 text-sm text-gray-600 text-center space-y-1">
-  {labeledSummaryData.map((item) => (
-    <div key={item.shortLabel}>
-      <span className="font-semibold">{item.shortLabel}:</span> {item.optionText}
-    </div>
-  ))}
-</div>
-
-  </div>
-)}
-
-
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">Scenario Submissions</h3>
-          </div>
-          
-          {submissions.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              No submissions yet
+        {currentQuestion && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Current Question</h2>
+            <div className="mb-4">
+              <p className="text-lg font-medium">{currentQuestion.text}</p>
             </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Submission Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {submissions.map(submission => (
-                  <tr key={submission._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {getUserName(submission.user._id)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {submission.user.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {submission.score} / {quiz.questions.length}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {Math.round((submission.score / quiz.questions.length) * 100)}%
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(submission.submittedAt).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+
+            <div className="space-y-4">
+              {currentQuestion.options.map((option, index) => (
+                <div key={index} className="border rounded-md p-4">
+                  <p className="font-medium">{option.text}</p>
+                  {currentQuestion.showImpact && (
+                    <p className="mt-2 text-orange-700">Impact: {option.impact}</p>
+                  )}
+                  {currentQuestion.showMitigation && (
+                    <p className="mt-2 text-green-700">Mitigation: {option.mitigation}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

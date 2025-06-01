@@ -197,8 +197,6 @@ router.put('/:id/deactivate', protect, admin, async (req, res) => {
   }
 });
 
-// routes/quizzes.js
-// Add this new route
 router.put('/:id/summary', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
@@ -216,6 +214,7 @@ router.put('/:id/summary', protect, admin, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 // @route   PUT /api/quizzes/:id/impact
 // @desc    Toggle impact visibility
 // @access  Private/Admin
@@ -254,6 +253,134 @@ router.put('/:id/mitigation', protect, admin, async (req, res) => {
     }
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add new routes for question control
+router.put('/:id/question/:questionIndex/show', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const questionIndex = parseInt(req.params.questionIndex);
+    if (questionIndex >= 0 && questionIndex < quiz.questions.length) {
+      quiz.questions[questionIndex].isVisible = true;
+      quiz.currentQuestionIndex = questionIndex;
+      await quiz.save();
+      res.json({ message: 'Question shown' });
+    } else {
+      res.status(400).json({ message: 'Invalid question index' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id/question/:questionIndex/options', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const questionIndex = parseInt(req.params.questionIndex);
+    if (questionIndex >= 0 && questionIndex < quiz.questions.length) {
+      quiz.questions[questionIndex].optionsVisible = true;
+      await quiz.save();
+      res.json({ message: 'Options shown' });
+    } else {
+      res.status(400).json({ message: 'Invalid question index' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id/question/:questionIndex/summary', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const questionIndex = parseInt(req.params.questionIndex);
+    if (questionIndex >= 0 && questionIndex < quiz.questions.length) {
+      quiz.questions[questionIndex].showSummary = true;
+      await quiz.save();
+      res.json({ message: 'Summary shown' });
+    } else {
+      res.status(400).json({ message: 'Invalid question index' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id/question/:questionIndex/impact', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const questionIndex = parseInt(req.params.questionIndex);
+    if (questionIndex >= 0 && questionIndex < quiz.questions.length) {
+      quiz.questions[questionIndex].showImpact = true;
+      await quiz.save();
+      res.json({ message: 'Impact shown' });
+    } else {
+      res.status(400).json({ message: 'Invalid question index' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id/question/:questionIndex/mitigation', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const questionIndex = parseInt(req.params.questionIndex);
+    if (questionIndex >= 0 && questionIndex < quiz.questions.length) {
+      quiz.questions[questionIndex].showMitigation = true;
+      await quiz.save();
+      res.json({ message: 'Mitigation shown' });
+    } else {
+      res.status(400).json({ message: 'Invalid question index' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.put('/:id/nextQuestion', protect, admin, async (req, res) => {
+  try {
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    const nextIndex = quiz.currentQuestionIndex + 1;
+    if (nextIndex < quiz.questions.length) {
+      quiz.currentQuestionIndex = nextIndex;
+      await quiz.save();
+      res.json({ message: 'Moved to next question', currentQuestionIndex: nextIndex });
+    } else {
+      res.status(400).json({ message: 'No more questions' });
+    }
+  } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });

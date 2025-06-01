@@ -19,7 +19,7 @@ const OptionSchema = new mongoose.Schema({
   },
   justification: {
     type: String,
-    required: function() { return this.isCorrect; } // Only required if isCorrect is true
+    required: function() { return this.isCorrect; }
   }
 });
 
@@ -28,7 +28,27 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  options: [OptionSchema]
+  options: [OptionSchema],
+  isVisible: {
+    type: Boolean,
+    default: false
+  },
+  optionsVisible: {
+    type: Boolean,
+    default: false
+  },
+  showSummary: {
+    type: Boolean,
+    default: false
+  },
+  showImpact: {
+    type: Boolean,
+    default: false
+  },
+  showMitigation: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const QuizSchema = new mongoose.Schema({
@@ -55,17 +75,9 @@ const QuizSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  showImpact: {
-    type: Boolean,
-    default: false
-  },
-  showSummary: {
-    type: Boolean,
-    default: false
-  },
-  showMitigation: {
-    type: Boolean,
-    default: false
+  currentQuestionIndex: {
+    type: Number,
+    default: 0
   },
   createdAt: {
     type: Date,

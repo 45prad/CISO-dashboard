@@ -141,5 +141,3 @@ const setupSocketHandlers = (io) => {
 };
 
 export default setupSocketHandlers;
-
-export default setupSocketHandlers

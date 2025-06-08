@@ -20,6 +20,12 @@ const OptionSchema = new mongoose.Schema({
   justification: {
     type: String,
     required: function() { return this.isCorrect; } // Only required if isCorrect is true
+  },
+  imageUrl: {
+    type: String // Optional field for image
+  },
+  videoUrl: {
+    type: String // Optional field for video
   }
 });
 
@@ -27,6 +33,12 @@ const QuestionSchema = new mongoose.Schema({
   text: {
     type: String,
     required: true
+  },
+  imageUrl: {
+    type: String // Optional field for question image
+  },
+  videoUrl: {
+    type: String // Optional field for question video
   },
   options: [OptionSchema]
 });
@@ -60,6 +72,10 @@ const QuizSchema = new mongoose.Schema({
     default: false
   },
   showSummary: {
+    type: Boolean,
+    default: false
+  },
+  showOptions: {
     type: Boolean,
     default: false
   },

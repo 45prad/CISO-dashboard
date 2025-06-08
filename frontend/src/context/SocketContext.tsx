@@ -11,17 +11,19 @@ interface SocketContextType {
   adminActivateQuiz: (quizId: string) => void;
   adminDeactivateQuiz: (quizId: string) => void;
   adminShowSummary: (quizId: string) => void;
+  adminShowOptions: (quizId: string) => void;
 }
 
 export const SocketContext = createContext<SocketContextType>({
   socket: null,
-  joinQuizRoom: () => {},
-  leaveQuizRoom: () => {},
-  adminShowImpact: () => {},
-  adminShowMitigation: () => {},
-  adminActivateQuiz: () => {},
-  adminDeactivateQuiz: () => {},
-  adminShowSummary:()=>{},
+  joinQuizRoom: () => { },
+  leaveQuizRoom: () => { },
+  adminShowImpact: () => { },
+  adminShowMitigation: () => { },
+  adminActivateQuiz: () => { },
+  adminDeactivateQuiz: () => { },
+  adminShowSummary: () => { },
+  adminShowOptions: () => { },
 });
 
 interface SocketProviderProps {
@@ -35,11 +37,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io(window.location.hostname === '13.235.75.80' 
-      ? `${backendUrl}` 
-      : window.location.origin
-    );
-    
+    const newSocket = io(backendUrl);
+
     setSocket(newSocket);
 
     // Clean up on unmount
@@ -69,10 +68,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   };
 
   const adminShowSummary = (quizId: string) => {
-  if (socket && user && user.role === 'admin') {
-    socket.emit('adminShowSummary', { quizId });
-  }
-};
+    if (socket && user && user.role === 'admin') {
+      socket.emit('adminShowSummary', { quizId });
+    }
+  };
+
+  const adminShowOptions = (quizId: string) => {
+    if (socket && user && user.role === 'admin') {
+      socket.emit('adminShowOptions', { quizId });
+    }
+  };
 
   const adminShowImpact = (quizId: string) => {
     if (socket && user && user.role === 'admin') {
@@ -107,7 +112,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       adminShowMitigation,
       adminActivateQuiz,
       adminDeactivateQuiz,
-      adminShowSummary
+      adminShowSummary,
+      adminShowOptions
     }}>
       {children}
     </SocketContext.Provider>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, CheckCircle, AlertTriangle, Play, Pause, EyeOff, Eye } from 'lucide-react';
+import { ArrowLeft, Users, CheckCircle, AlertTriangle, Play, Pause, EyeOff, Eye, ListChecks, BarChart } from 'lucide-react';
 import axios from 'axios';
 import AdminHeader from '../../components/AdminHeader';
-import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import ScenarioSummary from '../../components/ScenarioSummary';
+import ResponseStats from '../../components/ResponseStats';
 
 const QuizMonitor = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -16,103 +16,138 @@ const QuizMonitor = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quizStats, setQuizStats] = useState([]);
   const [stats, setStats] = useState({
     totalAssigned: 0,
     totalSubmitted: 0,
     waitingUsers: 0
   });
-  
-  const { user } = useContext(AuthContext);
-  const { 
-    socket, 
-    joinQuizRoom, 
-    adminActivateQuiz, 
+
+  const {
+    socket,
+    joinQuizRoom,
+    adminActivateQuiz,
     adminDeactivateQuiz,
     adminShowImpact,
     adminShowMitigation,
-    adminShowSummary
+    adminShowSummary,
+    adminShowOptions,
   } = useContext(SocketContext);
-  
+
   const navigate = useNavigate();
 
-  
-// Add this function to fetch summary data
-const fetchSummaryData = async () => {
-  try {
-    const { data } = await axios.get(`${backendUrl}/api/submissions/summary/${id}`);
-    setSummaryData(data);
-  } catch (err) {
-    console.error('Failed to fetch summary data:', err);
-  }
-};
 
-// Add this toggle function
-const toggleSummary = async () => {
-  try {
-    const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/summary`);
-    
-    setQuiz({
-      ...quiz,
-      showSummary: data.showSummary
-    });
-    
-    if (data.showSummary) {
-      await fetchSummaryData();
-      adminShowSummary(id);
+  // Add this function to fetch summary data
+  const fetchSummaryData = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/submissions/summary/${id}`);
+      setSummaryData(data);
+    } catch (err) {
+      console.error('Failed to fetch summary data:', err);
     }
-  } catch (err) {
-    setError(err.response?.data?.message || 'Failed to toggle summary visibility');
-  }
-};
-  
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch quiz, submissions, and users in parallel
-        const [quizRes, submissionsRes, usersRes] = await Promise.all([
-          axios.get(`${backendUrl}/api/quizzes/${id}`),
-          axios.get(`${backendUrl}/api/submissions/quiz/${id}`),
-          axios.get(`${backendUrl}/api/users`)
-        ]);
-        
-        setQuiz(quizRes.data);
-        setSubmissions(submissionsRes.data);
-        setUsers(usersRes.data);
-        
-        // Calculate stats
-        const assignedUsers = quizRes.data.assignedUsers ? quizRes.data.assignedUsers.length : 0;
-        const submittedCount = submissionsRes.data.length;
-        
-        setStats({
-          totalAssigned: assignedUsers,
-          totalSubmitted: submittedCount,
-          waitingUsers: submittedCount
-        });
-        
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch data');
-        setLoading(false);
+  };
+
+  const fetchStats = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/submissions/quiz/${id}/stats`);
+
+      setQuizStats(data);
+    } catch (err) {
+      console.error('Failed to load quiz stats:', err);
+    }
+  };
+
+  // Add this toggle function
+  const toggleSummary = async () => {
+    try {
+      const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/summary`);
+
+      setQuiz({
+        ...quiz,
+        showSummary: data.showSummary
+      });
+
+      if (data.showSummary) {
+        await fetchSummaryData();
+        await fetchStats();
+        adminShowSummary(id);
       }
-    };
-    
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to toggle summary visibility');
+    }
+  };
+
+  const toggleOptions = async () => {
+    try {
+      const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/options`);
+
+      setQuiz({
+        ...quiz,
+        showOptions: data.showOptions
+      });
+
+      if (data.showOptions) {
+        adminShowOptions(id);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to toggle summary visibility');
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-    
+
     // Join socket room
     if (socket) {
       joinQuizRoom(id);
     }
-    
+
     // Cleanup on unmount
     return () => {
       // Nothing to cleanup yet
     };
   }, [id, socket, joinQuizRoom]);
-  
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [quizRes, submissionsRes, usersRes] = await Promise.all([
+        axios.get(`${backendUrl}/api/quizzes/${id}`),
+        axios.get(`${backendUrl}/api/submissions/quiz/${id}`),
+        axios.get(`${backendUrl}/api/users`)
+      ]);
+
+      setQuiz(quizRes.data);
+      setSubmissions(submissionsRes.data);
+      setUsers(usersRes.data);
+
+      if (quizRes.data.showSummary) {
+        await fetchSummaryData(); // Wait for summary data to load
+        await fetchStats(); // Also ensure stats are loaded
+      }
+
+      const assignedUsers = quizRes.data.assignedUsers?.length || 0;
+      const submittedCount = submissionsRes.data.length;
+
+      setStats({
+        totalAssigned: assignedUsers,
+        totalSubmitted: submittedCount,
+        waitingUsers: submittedCount
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch data');
+      // setQuiz(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Listen for socket events
   useEffect(() => {
     if (!socket) return;
-    
+
     // Update room info when users join/leave
     const handleRoomUpdate = (data) => {
       setStats(prev => ({
@@ -120,14 +155,14 @@ const toggleSummary = async () => {
         waitingUsers: data.userCount
       }));
     };
-    
+
     socket.on('roomUpdate', handleRoomUpdate);
-    
+
     return () => {
       socket.off('roomUpdate', handleRoomUpdate);
     };
   }, [socket]);
-  
+
   const toggleQuizActive = async () => {
     try {
       if (quiz.isActive) {
@@ -139,7 +174,7 @@ const toggleSummary = async () => {
         await axios.put(`${backendUrl}/api/quizzes/${id}/activate`);
         adminActivateQuiz(id);
       }
-      
+
       // Update local state
       setQuiz({
         ...quiz,
@@ -151,17 +186,17 @@ const toggleSummary = async () => {
       setError(err.response?.data?.message || 'Failed to update quiz status');
     }
   };
-  
+
   const toggleImpact = async () => {
     try {
       const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/impact`);
-      
+
       // Update local state
       setQuiz({
         ...quiz,
         showImpact: data.showImpact
       });
-      
+
       // Emit socket event to show impact
       if (data.showImpact) {
         adminShowImpact(id);
@@ -170,17 +205,17 @@ const toggleSummary = async () => {
       setError(err.response?.data?.message || 'Failed to toggle impact visibility');
     }
   };
-  
+
   const toggleMitigation = async () => {
     try {
       const { data } = await axios.put(`${backendUrl}/api/quizzes/${id}/mitigation`);
-      
+
       // Update local state
       setQuiz({
         ...quiz,
         showMitigation: data.showMitigation
       });
-      
+
       // Emit socket event to show mitigation
       if (data.showMitigation) {
         adminShowMitigation(id);
@@ -189,13 +224,13 @@ const toggleSummary = async () => {
       setError(err.response?.data?.message || 'Failed to toggle mitigation visibility');
     }
   };
-  
+
   // Get user name by ID
   const getUserName = (userId) => {
     const user = users.find(u => u._id === userId);
     return user ? user.name : 'Unknown User';
   };
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -208,7 +243,7 @@ const toggleSummary = async () => {
       </div>
     );
   }
-  
+
   if (!quiz) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -223,17 +258,17 @@ const toggleSummary = async () => {
   }
 
   const labeledSummaryData = summaryData.map((item, index) => ({
-  ...item,
-  shortLabel: String.fromCharCode(65 + index), // A, B, C, D, ...
-}));
-  
+    ...item,
+    shortLabel: String.fromCharCode(65 + index), // A, B, C, D, ...
+  }));
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader />
-      
+
       <main className="container mx-auto px-4 py-6">
         <div className="flex items-center mb-6">
-          <button 
+          <button
             onClick={() => navigate('/admin')}
             className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
           >
@@ -244,13 +279,13 @@ const toggleSummary = async () => {
             <p className="text-gray-600 mt-1">{quiz.title}</p>
           </div>
         </div>
-        
+
         {error && (
           <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
             {error}
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
@@ -271,14 +306,14 @@ const toggleSummary = async () => {
                 <span className="font-semibold">{stats.waitingUsers}</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full mt-2">
-                <div 
-                  className="h-2 bg-blue-600 rounded-full" 
+                <div
+                  className="h-2 bg-blue-600 rounded-full"
                   style={{ width: `${stats.totalAssigned ? (stats.totalSubmitted / stats.totalAssigned) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <AlertTriangle size={24} className="text-orange-500 mr-2" />
@@ -305,7 +340,7 @@ const toggleSummary = async () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <CheckCircle size={24} className="text-green-600 mr-2" />
@@ -314,11 +349,10 @@ const toggleSummary = async () => {
             <div className="flex flex-col space-y-3">
               <button
                 onClick={toggleQuizActive}
-                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-                  quiz.isActive 
-                    ? 'bg-red-600 hover:bg-red-700 text-white' 
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                } transition-colors`}
+                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${quiz.isActive
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  } transition-colors`}
               >
                 {quiz.isActive ? (
                   <>
@@ -334,40 +368,39 @@ const toggleSummary = async () => {
               </button>
 
               <button
-  onClick={toggleSummary}
-  disabled={!quiz.isActive}
-  className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-    !quiz.isActive 
-      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      : quiz.showSummary
-        ? 'bg-indigo-200 text-indigo-800 hover:bg-indigo-300'
-        : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-  } transition-colors`}
->
-  {quiz.showSummary ? (
-    <>
-      <EyeOff size={18} className="mr-2" />
-      Hide Summary
-    </>
-  ) : (
-    <>
-      <Eye size={18} className="mr-2" />
-      Show Summary
-    </>
-  )}
-</button>
+                onClick={toggleOptions}
+                disabled={!quiz.isActive}
+                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${quiz.showOptions
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+                  } transition-colors`}
+              >
+                <ListChecks size={20} className="mr-2" /> {quiz.showOptions ? "Hide Options" : "Show Options"}
+              </button>
 
-              
+              <button
+                onClick={toggleSummary}
+                disabled={!quiz.isActive}
+                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${!quiz.isActive
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : quiz.showSummary
+                    ? 'bg-indigo-200 text-indigo-800 hover:bg-indigo-300'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  } transition-colors`}
+              >
+                <BarChart size={20} className="mr-2" />{quiz.showSummary ? "Hide Summary" : "Show Summary"}
+              </button>
+
+
               <button
                 onClick={toggleImpact}
                 disabled={!quiz.isActive}
-                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-                  !quiz.isActive 
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : quiz.showImpact
-                      ? 'bg-orange-200 text-orange-800 hover:bg-orange-300'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                } transition-colors`}
+                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${!quiz.isActive
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : quiz.showImpact
+                    ? 'bg-orange-200 text-orange-800 hover:bg-orange-300'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  } transition-colors`}
               >
                 {quiz.showImpact ? (
                   <>
@@ -381,17 +414,16 @@ const toggleSummary = async () => {
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={toggleMitigation}
                 disabled={!quiz.isActive || !quiz.showImpact}
-                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${
-                  !quiz.isActive || !quiz.showImpact
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : quiz.showMitigation
-                      ? 'bg-purple-200 text-purple-800 hover:bg-purple-300'
-                      : 'bg-teal-600 hover:bg-teal-700 text-white'
-                } transition-colors`}
+                className={`flex items-center justify-center w-full py-2 px-4 rounded-md ${!quiz.isActive || !quiz.showImpact
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : quiz.showMitigation
+                    ? 'bg-purple-200 text-purple-800 hover:bg-purple-300'
+                    : 'bg-teal-600 hover:bg-teal-700 text-white'
+                  } transition-colors`}
               >
                 {quiz.showMitigation ? (
                   <>
@@ -408,109 +440,31 @@ const toggleSummary = async () => {
             </div>
           </div>
         </div>
-{/* {quiz.showSummary && summaryData.length > 0 && (
-  <div className="bg-white rounded-2xl shadow-lg p-6 mt-6 border border-gray-200">
-    <h3 className="text-xl font-bold mb-4 text-gray-700">Quiz Summary</h3>
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={labeledSummaryData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="shortLabel"
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                    <p className="text-sm font-semibold">{payload[0].payload.optionText}</p>
-                    <p className="text-sm text-gray-600">Count: {payload[0].value}</p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Legend />
-          <Bar
-            dataKey="count"
-            fill="#6366F1"
-            name="Selected Count"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-)} */}
-{quiz.showSummary && summaryData.length > 0 && (
-  <div className="bg-white rounded-2xl shadow-lg p-6 mt-6 border border-gray-200">
-    <h3 className="text-xl font-bold mb-4 text-gray-700">Scenario Summary</h3>
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={labeledSummaryData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="shortLabel"
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 14, fill: '#555' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-white p-2 border border-gray-300 rounded shadow">
-                    <p className="text-sm font-semibold">{payload[0].payload.optionText}</p>
-                    <p className="text-sm text-gray-600">Count: {payload[0].value}</p>
-                  </div>
-                );
-              }
-              return null;
-            }}
-          />
-          <Legend />
-          <Bar
-            dataKey="count"
-            fill="#6366F1"
-            name="Selected Count"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
 
-    {/* A: Text of Option A, etc. */}
-    <div className="mt-4 text-sm text-gray-600 text-center space-y-1">
-  {labeledSummaryData.map((item) => (
-    <div key={item.shortLabel}>
-      <span className="font-semibold">{item.shortLabel}:</span> {item.optionText}
-    </div>
-  ))}
-</div>
+        {quiz.showSummary && summaryData.length > 0 && (
+          <ScenarioSummary
+            summaryData={summaryData}
+            labeledSummaryData={labeledSummaryData}
+          />
+        )}
 
-  </div>
-)}
+        {quiz.showSummary && quizStats && quizStats.length > 0 && (
+          quizStats.map(stat => (
+            <ResponseStats
+              key={stat.questionId}
+              questionText={stat.questionText}
+              options={stat.options}
+            />
+          ))
+        )}
 
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+
+        <div className="bg-white rounded-lg shadow-md overflow-hidden mt-8">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold">Scenario Submissions</h3>
           </div>
-          
+
           {submissions.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
               No submissions yet

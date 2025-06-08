@@ -97,6 +97,59 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+// Get all submissions for a specific quiz with user details and answers
+router.get('/quiz/:quizId/stats', protect, admin, async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    // Get quiz with questions and options
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+    // Get all submissions for the quiz
+    const submissions = await Submission.find({ quiz: quizId }).populate({
+      path: 'user',
+      select: 'name email'
+    });
+
+    // Build a map: optionId -> [users]
+    const optionUserMap = {};
+
+    submissions.forEach(sub => {
+      sub.answers.forEach(ans => {
+        const key = ans.selectedOption.toString();
+        if (!optionUserMap[key]) optionUserMap[key] = [];
+        optionUserMap[key].push({
+          userId: sub.user._id,
+          name: sub.user.name,
+          email: sub.user.email,
+          timestamp: sub.submittedAt
+        });
+      });
+    });
+
+    // Build response
+    const stats = quiz.questions.map(question => ({
+      questionId: question._id,
+      questionText: question.text,
+      options: question.options.map(option => {
+        const selectedUsers = optionUserMap[option._id.toString()] || [];
+        return {
+          optionId: option._id,
+          optionText: option.text,
+          selectedCount: selectedUsers.length,
+          users: selectedUsers
+        };
+      })
+    }));
+
+    res.json(stats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/submissions/quiz/:quizId
 // @desc    Get all submissions for a quiz
 // @access  Private/Admin

@@ -1,62 +1,43 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PlusCircle, X, Save, ArrowLeft, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { AuthContext } from '../../context/AuthContext';
 import AdminHeader from '../../components/AdminHeader';
-import AuthContext from '../../context/AuthContext';
+import { Upload, Image, Video, X, Save, Trash2, AlertCircle, CheckCircle2, FileText, ArrowLeft } from 'lucide-react';
+import MediaPreview from '../../components/MediaPreview';
 
 const EditQuiz = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
   const { id } = useParams();
-  const [quiz, setQuiz] = useState(null);
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [questions, setQuestions] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState('');
-  const [options, setOptions] = useState([{ text: '', isCorrect: false, impact: '', mitigation: '' }]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  
-  const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const fetchQuiz = async () => {
-      try {
-        const { data } = await axios.get(`${backendUrl}/api/quizzes/${id}`);
-        setQuiz(data);
-        setTitle(data.title);
-        setDescription(data.description);
-        setQuestions(data.questions);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch quiz');
-        setLoading(false);
-      }
-    };
-    
-    fetchQuiz();
-  }, [id]);
-  
+  const [mediaMap, setMediaMap] = useState({}); // { [qIndex]: { imageName, videoName, optionImages: [], optionVideos: [] } }
+  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [currentOptions, setCurrentOptions] = useState([{ text: '', isCorrect: false, impact: '', mitigation: '' }]);
+
   const addOption = () => {
-    if (options.length < 5) {
-      setOptions([...options, { text: '', isCorrect: false, impact: '', mitigation: '' }]);
+    if (currentOptions.length < 5) {
+      setCurrentOptions([...currentOptions, { text: '', isCorrect: false, impact: '', mitigation: '' }]);
     }
   };
-  
+
   const removeOption = (index) => {
-    if (options.length > 1) {
-      const newOptions = [...options];
+    if (currentOptions.length > 1) {
+      const newOptions = [...currentOptions];
       newOptions.splice(index, 1);
-      setOptions(newOptions);
+      setCurrentOptions(newOptions);
     }
   };
-  
-  const handleOptionChange = (index, field, value) => {
-    const newOptions = [...options];
-    
+
+  const handleNewOptionChange = (index, field, value) => {
+    const newOptions = [...currentOptions];
+
     if (field === 'isCorrect') {
       // If making this option correct, make all others incorrect
       newOptions.forEach((option, i) => {
@@ -69,58 +50,129 @@ const EditQuiz = () => {
     } else {
       newOptions[index][field] = value;
     }
-    
-    setOptions(newOptions);
+
+    setCurrentOptions(newOptions);
   };
-  
+
   const addQuestion = () => {
     if (!currentQuestion.trim()) {
       setError('Question text is required');
       return;
     }
-    
-    if (!options.some(option => option.isCorrect)) {
+
+    if (!currentOptions.some(option => option.isCorrect)) {
       setError('At least one option must be marked as correct');
       return;
     }
-    
-    if (options.some(option => !option.text || !option.impact || !option.mitigation)) {
+
+    if (currentOptions.some(option => !option.text || !option.impact || !option.mitigation)) {
       setError('All options must have text, impact, and mitigation filled out');
       return;
     }
-    
-    setQuestions([...questions, { text: currentQuestion, options: [...options] }]);
+
+    setQuestions([...questions, {
+      text: currentQuestion,
+      options: [...currentOptions]
+    }]);
     setCurrentQuestion('');
-    setOptions([{ text: '', isCorrect: false, impact: '', mitigation: '' }]);
+    setCurrentOptions([{ text: '', isCorrect: false, impact: '', mitigation: '' }]);
     setError(null);
   };
-  
+
   const removeQuestion = (index) => {
     const newQuestions = [...questions];
     newQuestions.splice(index, 1);
     setQuestions(newQuestions);
   };
-  
+
+  useEffect(() => {
+    const fetchQuiz = async () => {
+      try {
+        const { data } = await axios.get(`${backendUrl}/api/quizzes/${id}`);
+        setTitle(data.title);
+        setDescription(data.description);
+        setQuestions(data.questions);
+        setLoading(false);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to fetch quiz');
+        setLoading(false);
+      }
+    };
+    fetchQuiz();
+  }, [id]);
+
+  const handleFileChange = (qIndex, type, file, optIndex = null) => {
+    setMediaMap(prev => {
+      const updated = { ...prev };
+      if (!updated[qIndex]) updated[qIndex] = { optionImages: [], optionVideos: [] };
+      if (type === 'questionImage') {
+        updated[qIndex].imageFile = file;
+        updated[qIndex].imageName = file.name;
+      } else if (type === 'questionVideo') {
+        updated[qIndex].videoFile = file;
+        updated[qIndex].videoName = file.name;
+      } else if (type === 'optionImage') {
+        updated[qIndex].optionImages[optIndex] = file;
+        if (!updated[qIndex].optionImageNames) updated[qIndex].optionImageNames = [];
+        updated[qIndex].optionImageNames[optIndex] = file.name;
+      } else if (type === 'optionVideo') {
+        updated[qIndex].optionVideos[optIndex] = file;
+        if (!updated[qIndex].optionVideoNames) updated[qIndex].optionVideoNames = [];
+        updated[qIndex].optionVideoNames[optIndex] = file.name;
+      }
+      return updated;
+    });
+  };
+
+  const handleOptionChange = (qIndex, oIndex, field, value) => {
+    const updated = [...questions];
+    updated[qIndex].options[oIndex][field] = value;
+    if (field === 'isCorrect' && value === true) {
+      // Ensure only one is correct
+      updated[qIndex].options = updated[qIndex].options.map((opt, idx) => ({
+        ...opt,
+        isCorrect: idx === oIndex
+      }));
+    }
+    setQuestions(updated);
+  };
+
   const handleSave = async () => {
-    if (!title.trim() || !description.trim()) {
+    if (!title || !description) {
       setError('Title and description are required');
       return;
     }
-    
-    if (questions.length === 0) {
-      setError('At least one question is required');
-      return;
-    }
-    
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    const preparedQuestions = questions.map((q, qIndex) => {
+      const media = mediaMap[qIndex] || {};
+      if (media.imageName) q.imageName = media.imageName;
+      if (media.videoName) q.videoName = media.videoName;
+      q.options = q.options.map((opt, oIndex) => {
+        if (media.optionImageNames && media.optionImageNames[oIndex])
+          opt.imageName = media.optionImageNames[oIndex];
+        if (media.optionVideoNames && media.optionVideoNames[oIndex])
+          opt.videoName = media.optionVideoNames[oIndex];
+        return opt;
+      });
+      return q;
+    });
+    formData.append('questions', JSON.stringify(preparedQuestions));
+    // Append files
+    Object.values(mediaMap).forEach(media => {
+      if (media.imageFile) formData.append('questionMedia', media.imageFile);
+      if (media.videoFile) formData.append('questionMedia', media.videoFile);
+      media.optionImages?.forEach(file => file && formData.append('optionMedia', file));
+      media.optionVideos?.forEach(file => file && formData.append('optionMedia', file));
+    });
     try {
       setSaving(true);
-      
-      await axios.put(`${backendUrl}/api/quizzes/${id}`, {
-        title,
-        description,
-        questions
+      await axios.put(`${backendUrl}/api/quizzes/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
-      
       setSaving(false);
       navigate('/admin');
     } catch (err) {
@@ -128,8 +180,10 @@ const EditQuiz = () => {
       setSaving(false);
     }
   };
-  
+
   const handleDelete = async () => {
+    const confirm = window.confirm('Are you sure you want to delete this quiz?');
+    if (!confirm) return;
     try {
       await axios.delete(`${backendUrl}/api/quizzes/${id}`);
       navigate('/admin');
@@ -137,264 +191,318 @@ const EditQuiz = () => {
       setError(err.response?.data?.message || 'Failed to delete quiz');
     }
   };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <AdminHeader />
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+
+  const FileUploadSection = ({ label, file, onChange, icon: Icon, accept = "image/png, image/jpeg, image/jpg, video/mp4, video/mov, video/avi, video/quicktime", existingMedia }) => (
+    <div className="space-y-3">
+      <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 cursor-pointer transition-all duration-200 group">
+        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-blue-100 transition-colors">
+          <Icon size={20} className="text-gray-600 group-hover:text-blue-600" />
+        </div>
+        <div>
+          <div className="font-medium text-gray-700">{label}</div>
+          <div className="text-sm text-gray-500">Click to upload or drag and drop</div>
+        </div>
+        <input
+          type="file"
+          accept={accept}
+          onChange={onChange}
+          className="hidden"
+        />
+      </label>
+
+      {/* Show existing media from database */}
+      {existingMedia && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">Current file:</span>
+            <span className="text-sm text-blue-700">{existingMedia}</span>
           </div>
         </div>
+      )}
+
+      {/* Show new uploaded file */}
+      {file && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-green-600" />
+              <span className="text-sm font-medium text-green-800">New file:</span>
+              <span className="text-sm text-green-700 truncate">{file.name || file}</span>
+            </div>
+            <button
+              onClick={() => onChange({ target: { files: [null] } })}
+              className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+            >
+              <X size={16} className="text-red-500" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <AdminHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-gray-600">Loading quiz...</span>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
-  
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminHeader />
-      
-      <main className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <button 
-              onClick={() => navigate('/admin')}
-              className="mr-4 p-2 rounded-full hover:bg-gray-200 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Edit Quiz</h1>
-              <p className="text-gray-600 mt-1">Update Scenario details and Situations</p>
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <AdminHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+            <div className="flex">
+              <AlertCircle className="text-red-400 mr-3 mt-0.5" size={20} />
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700">{error}</p>
+              </div>
             </div>
           </div>
-          
-          {!confirmDelete ? (
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <AdminHeader />
+
+      <main className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex items-center mb-6">
             <button
-              onClick={() => setConfirmDelete(true)}
-              className="flex items-center py-2 px-4 border border-red-500 text-red-500 rounded-md hover:bg-red-50 transition-colors"
+              onClick={() => navigate('/admin')}
+              className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <Trash2 size={18} className="mr-2" />
-              Delete Scenario
+              <ArrowLeft size={20} className="text-gray-600" />
             </button>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Confirm delete?</span>
-              <button
-                onClick={handleDelete}
-                className="py-2 px-4 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-              >
-                Yes, Delete
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Edit Quiz</h1>
+              <p className="text-gray-600 mt-1">Modify your quiz content and settings</p>
+            </div>
+          </div>
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
+              <div className="flex">
+                <AlertCircle className="text-red-400 mr-3 mt-0.5" size={20} />
+                <div>
+                  <p className="text-red-800 font-medium">Error</p>
+                  <p className="text-red-700">{error}</p>
+                </div>
+              </div>
             </div>
           )}
-        </div>
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
-            {error}
-          </div>
-        )}
-        
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Scenario Details</h2>
-          
-          <div className="space-y-4">
+
+          {/* Quiz Details */}
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Quiz Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Scenario title"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Enter quiz title..."
               />
             </div>
-            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Describe your quiz..."
                 rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Scenario description"
-              ></textarea>
+              />
             </div>
           </div>
+
+          {/* Delete Button */}
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+            >
+              <Trash2 size={18} />
+              Delete Quiz
+            </button>
+          </div>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Situations</h2>
-          
-          {questions.length > 0 && (
-            <div className="mb-6 space-y-4">
-              {questions.map((question, qIndex) => (
-                <div key={qIndex} className="border border-gray-200 rounded-md p-4">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium">
-                      {qIndex + 1}. {question.text}
-                    </h3>
-                    <button
-                      onClick={() => removeQuestion(qIndex)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  
-                  <ul className="mt-2 space-y-2">
-                    {question.options.map((option, oIndex) => (
-                      <li key={oIndex} className="flex items-center">
-                        <span className={`inline-block w-4 h-4 rounded-full mr-2 ${
-                          option.isCorrect ? 'bg-green-500' : 'bg-gray-300'
-                        }`}></span>
-                        <span>{option.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="border border-gray-200 rounded-md p-4">
-            <h3 className="font-medium mb-3">Add New Situations</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Situations Text
-                </label>
-                <input
-                  type="text"
-                  value={currentQuestion}
-                  onChange={(e) => setCurrentQuestion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter Situation"
-                />
-              </div>
-              
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Options
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addOption}
-                    disabled={options.length >= 5}
-                    className={`text-sm flex items-center ${
-                      options.length >= 5 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-blue-600 hover:text-blue-700'
-                    }`}
-                  >
-                    <PlusCircle size={16} className="mr-1" />
-                    Add Option
-                  </button>
-                </div>
-                
-                {options.map((option, index) => (
-                  <div key={index} className="border border-gray-200 rounded-md p-3 mb-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          checked={option.isCorrect}
-                          onChange={() => handleOptionChange(index, 'isCorrect', true)}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <label className="ml-2 text-sm text-gray-700">
-                          Correct Answer
-                        </label>
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={() => removeOption(index)}
-                        disabled={options.length <= 1}
-                        className={`text-red-500 hover:text-red-700 ${
-                          options.length <= 1 ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        <X size={18} />
-                      </button>
+
+        {/* Questions */}
+        <div className="space-y-6">
+          {questions.map((q, qIndex) => (
+            <div key={qIndex} className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex flex-row justify-between w-full">
+                <div className="flex flex-col items-start gap-3 mb-6">
+                  <div className="flex flex-row">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-semibold text-blue-700">{qIndex + 1}</span>
                     </div>
-                    
-                    <div className="space-y-3">
-                      <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{q.text}</h3>
+                  </div>
+                  {q.imageUrl && (
+                    <MediaPreview filepath={q.imageUrl} />
+                  )}
+                </div>
+                <button
+                  onClick={() => removeQuestion(qIndex)}
+                  className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+
+              {/* Question Media */}
+              <div className="mb-6 space-y-4">
+                <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                  <FileText size={16} />
+                  Question Media
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <FileUploadSection
+                    label="Upload Question Image"
+                    file={mediaMap[qIndex]?.imageFile}
+                    existingMedia={q.imageName}
+                    onChange={e => handleFileChange(qIndex, 'questionImage', e.target.files[0])}
+                    icon={Image}
+                    accept="image/png, image/jpeg, image/jpg"
+                  />
+                  <FileUploadSection
+                    label="Upload Question Video"
+                    file={mediaMap[qIndex]?.videoFile}
+                    existingMedia={q.videoName}
+                    onChange={e => handleFileChange(qIndex, 'questionVideo', e.target.files[0])}
+                    icon={Video}
+                    accept="video/mp4, video/mov, video/avi, video/quicktime"
+                  />
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-700">Answer Options</h4>
+                {q.options.map((opt, oIndex) => (
+                  <div key={oIndex} className={`border-2 rounded-xl p-6 transition-all ${opt.isCorrect ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="flex items-start gap-4 mb-4">
+                      <button
+                        onClick={() => handleOptionChange(qIndex, oIndex, 'isCorrect', true)}
+                        className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${opt.isCorrect ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-green-400'
+                          }`}
+                      >
+                        {opt.isCorrect && <CheckCircle2 size={12} className="text-white" />}
+                      </button>
+                      <div className="flex-1">
                         <input
                           type="text"
-                          value={option.text}
-                          onChange={(e) => handleOptionChange(index, 'text', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Option text"
+                          value={opt.text}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex, 'text', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder={`Option ${oIndex + 1} text...`}
                         />
                       </div>
-                      
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Impact</label>
                         <textarea
-                          value={option.impact}
-                          onChange={(e) => handleOptionChange(index, 'impact', e.target.value)}
+                          value={opt.impact}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex, 'impact', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          placeholder="Describe the impact..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Impact explanation"
-                        ></textarea>
+                        />
                       </div>
-                      
                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Mitigation</label>
                         <textarea
-                          value={option.mitigation}
-                          onChange={(e) => handleOptionChange(index, 'mitigation', e.target.value)}
+                          value={opt.mitigation}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex, 'mitigation', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          placeholder="Mitigation strategy..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Mitigation recommendation"
-                        ></textarea>
+                        />
                       </div>
+                      {opt.isCorrect &&
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Justification</label>
+                          <textarea
+                            value={opt.justification}
+                            onChange={(e) => handleOptionChange(qIndex, oIndex, 'justification', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="Mitigation strategy..."
+                            rows="2"
+                          />
+                        </div>
+                      }
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FileUploadSection
+                        label="Option Image"
+                        file={mediaMap[qIndex]?.optionImages?.[oIndex]}
+                        existingMedia={opt.imageName}
+                        onChange={e => handleFileChange(qIndex, 'optionImage', e.target.files[0], oIndex)}
+                        icon={Image}
+                        accept="image/png, image/jpeg, image/jpg"
+                      />
+                      <FileUploadSection
+                        label="Option Video"
+                        file={mediaMap[qIndex]?.optionVideos?.[oIndex]}
+                        existingMedia={opt.videoName}
+                        onChange={e => handleFileChange(qIndex, 'optionVideo', e.target.files[0], oIndex)}
+                        icon={Video}
+                        accept="video/mp4, video/mov, video/avi, video/quicktime"
+                      />
+
+                      {opt.imageUrl && (
+                        <div className="md:col-span-2 mt-4 flex gap-4">
+                          {opt.imageUrl && (
+                            <div className="w-32 h-32 border rounded overflow-hidden">
+                              <MediaPreview filepath={opt.imageUrl} />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                Add Situation
-              </button>
             </div>
-          </div>
+          ))}
         </div>
-        
-        <div className="flex justify-end">
+
+        {/* Submit Button */}
+        < div className="flex justify-end" >
           <button
-            type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-lg font-semibold shadow-lg"
           >
             {saving ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                Saving...
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Saving Quiz...
               </>
             ) : (
               <>
-                <Save size={18} className="mr-2" />
-                Save Changes
+                <Save size={20} />
+                Update Quiz
               </>
             )}
           </button>

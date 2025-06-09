@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -16,6 +17,7 @@ import scoreboardRoutes from './routes/scoreboard.js';
 
 // Import socket handler
 import setupSocketHandlers from './socket/socket.js';
+import { protect } from './middleware/auth.js';
 
 // Configure environment variables
 dotenv.config();
@@ -50,6 +52,19 @@ app.use('/api/users', userRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/scoreboard', scoreboardRoutes);
+
+// serve media files
+app.get('/uploads/:type/:filename', protect, async (req, res) => {
+  const {type, filename} = req.params;
+  const filePath = path.join(process.cwd(), 'uploads', type, filename);
+
+  // Check if file exists
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  } else {
+    return res.status(404).json({ message: 'File not found' });
+  }
+});
 
 // Setup socket handlers
 setupSocketHandlers(io);

@@ -19,7 +19,17 @@ const OptionSchema = new mongoose.Schema({
   },
   justification: {
     type: String,
-    required: function() { return this.isCorrect; }
+    required: function() { return this.isCorrect; } // Only required if isCorrect is true
+  },
+  imageUrl: {
+    type: String // Optional field for image
+  },
+  videoUrl: {
+    type: String // Optional field for video
+  },
+  score: {
+    type: Number,
+    default: 0,
   }
 });
 
@@ -28,27 +38,13 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  options: [OptionSchema],
-  isVisible: {
-    type: Boolean,
-    default: false
+  imageUrl: {
+    type: String // Optional field for question image
   },
-  optionsVisible: {
-    type: Boolean,
-    default: false
+  videoUrl: {
+    type: String // Optional field for question video
   },
-  showSummary: {
-    type: Boolean,
-    default: false
-  },
-  showImpact: {
-    type: Boolean,
-    default: false
-  },
-  showMitigation: {
-    type: Boolean,
-    default: false
-  }
+  options: [OptionSchema]
 });
 
 const QuizSchema = new mongoose.Schema({
@@ -75,9 +71,21 @@ const QuizSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  currentQuestionIndex: {
-    type: Number,
-    default: 0
+  showImpact: {
+    type: Boolean,
+    default: false
+  },
+  showSummary: {
+    type: Boolean,
+    default: false
+  },
+  showOptions: {
+    type: Boolean,
+    default: false
+  },
+  showMitigation: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,

@@ -1,127 +1,132 @@
+// WaitingRoom.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, ArrowLeft, AlertTriangle, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Clock, ArrowLeft, MessageSquare, Users, BarChart2 } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import UserHeader from '../../components/UserHeader';
 import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
+import ScenarioSummary from '../../components/ScenarioSummary';
 
 const WaitingRoom = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
   const { id } = useParams();
   const [quiz, setQuiz] = useState(null);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [summaryData, setSummaryData] = useState([]);
+  const [submission, setSubmission] = useState(null);
+  const [userCount, setUserCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  
+  const [summaryData, setSummaryData] = useState([]);
+
   const { user } = useContext(AuthContext);
-  const { socket, joinQuizRoom } = useContext(SocketContext);
+  const { socket, joinQuizRoom, leaveQuizRoom } = useContext(SocketContext);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data } = await axios.get(`${backendUrl}/api/quizzes/${id}`);
-        setQuiz(data);
-        setCurrentQuestion(data.questions[data.currentQuestionIndex]);
-        
-        // Check if quiz is completed
-        if (data.currentQuestionIndex === data.questions.length - 1 && 
-            data.questions[data.currentQuestionIndex].showMitigation) {
-          setQuizCompleted(true);
+        const [quizRes, submissionsRes] = await Promise.all([
+          axios.get(`${backendUrl}/api/quizzes/${id}`),
+          axios.get(`${backendUrl}/api/submissions/user`)
+        ]);
+
+        setQuiz(quizRes.data);
+
+        const userSubmission = submissionsRes.data.find(sub =>
+          sub.quiz === id || (sub.quiz && sub.quiz._id === id)
+        );
+
+        if (!userSubmission) {
+          navigate(`/quiz/${id}`);
+          return;
         }
-        
-        if (data.questions[data.currentQuestionIndex].showSummary) {
-          const summaryRes = await axios.get(`${backendUrl}/api/submissions/summary/${id}`);
-          setSummaryData(summaryRes.data);
-        }
-        
+
+        setSubmission(userSubmission);
         setLoading(false);
+
+        if (quizRes.data.showImpact && quizRes.data.showMitigation) {
+          navigate(`/quiz/${id}/result`);
+        }
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to fetch data');
         setLoading(false);
       }
     };
-    
+
     fetchData();
-    
-    if (socket) {
+
+    if (socket && user) {
       joinQuizRoom(id);
-      
-      socket.on('questionSummaryShown', async ({ quizId, questionIndex }) => {
-        try {
-          const summaryRes = await axios.get(`${backendUrl}/api/submissions/summary/${quizId}`);
-          setSummaryData(summaryRes.data);
-          setQuiz(prev => {
-            const updatedQuiz = {
-              ...prev,
-              questions: prev.questions.map((q, i) => ({
-                ...q,
-                showSummary: i === questionIndex ? true : q.showSummary
-              }))
-            };
-            setCurrentQuestion(updatedQuiz.questions[questionIndex]);
-            return updatedQuiz;
-          });
-        } catch (error) {
-          console.error('Failed to fetch summary data:', error);
-        }
-      });
-      
-      socket.on('questionImpactShown', ({ quizId, questionIndex }) => {
-        setQuiz(prev => {
-          const updatedQuiz = {
-            ...prev,
-            questions: prev.questions.map((q, i) => ({
-              ...q,
-              showImpact: i === questionIndex ? true : q.showImpact
-            }))
-          };
-          setCurrentQuestion(updatedQuiz.questions[questionIndex]);
-          return updatedQuiz;
-        });
-      });
-      
-      socket.on('questionMitigationShown', ({ quizId, questionIndex }) => {
-        setQuiz(prev => {
-          const updatedQuiz = {
-            ...prev,
-            questions: prev.questions.map((q, i) => ({
-              ...q,
-              showMitigation: i === questionIndex ? true : q.showMitigation
-            }))
-          };
-          setCurrentQuestion(updatedQuiz.questions[questionIndex]);
-          
-          // Check if this is the last question and mitigation is shown
-          if (questionIndex === prev.questions.length - 1) {
-            setQuizCompleted(true);
-          }
-          
-          return updatedQuiz;
-        });
-      });
-      
-      socket.on('movedToNextQuestion', ({ quizId, questionIndex }) => {
-        if (!quizCompleted) {
-          navigate(`/quiz/${quizId}`);
-        }
-      });
     }
-    
+
     return () => {
-      if (socket) {
-        socket.off('questionSummaryShown');
-        socket.off('questionImpactShown');
-        socket.off('questionMitigationShown');
-        socket.off('movedToNextQuestion');
+      if (socket && user) {
+        leaveQuizRoom(id);
       }
     };
-  }, [id, socket]);
-  
+  }, [id, user, socket, navigate, joinQuizRoom, leaveQuizRoom]);
+
+  // Fetch summary data when quiz.showSummary changes
+  useEffect(() => {
+    if (quiz?.showSummary) {
+      const fetchSummaryData = async () => {
+        try {
+          const { data } = await axios.get(`${backendUrl}/api/submissions/summary/${id}`);
+          setSummaryData(data);
+        } catch (err) {
+          console.error('Failed to fetch summary data:', err);
+        }
+      };
+      fetchSummaryData();
+    }
+  }, [quiz?.showSummary, id]);
+
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleShowImpact = (data) => {
+      if (data.quizId === id) {
+        setQuiz(prev => prev ? { ...prev, showImpact: true } : prev);
+      }
+    };
+
+    const handleShowMitigation = (data) => {
+      if (data.quizId === id) {
+        setQuiz(prev => prev ? { ...prev, showMitigation: true } : prev);
+        navigate(`/quiz/${id}/result`);
+      }
+    };
+
+    const handleShowSummary = (data) => {
+      if (data.quizId === id) {
+        setQuiz(prev => prev ? { ...prev, showSummary: true } : prev);
+      }
+    };
+
+    const handleRoomUpdate = (data) => {
+      setUserCount(data.userCount);
+    };
+
+    socket.on('showImpact', handleShowImpact);
+    socket.on('showMitigation', handleShowMitigation);
+    socket.on('showSummary', handleShowSummary);
+    socket.on('roomUpdate', handleRoomUpdate);
+
+    return () => {
+      socket.off('showImpact', handleShowImpact);
+      socket.off('showMitigation', handleShowMitigation);
+      socket.off('showSummary', handleShowSummary);
+      socket.off('roomUpdate', handleRoomUpdate);
+    };
+  }, [socket, id, navigate]);
+
+  useEffect(() => {
+    if (quiz && quiz.showImpact && quiz.showMitigation) {
+      navigate(`/quiz/${id}/result`);
+    }
+  }, [quiz, id, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -134,7 +139,7 @@ const WaitingRoom = () => {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -143,174 +148,101 @@ const WaitingRoom = () => {
           <div className="bg-red-100 text-red-700 p-4 rounded-md">
             {error}
           </div>
+
+          <div className="mt-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center text-teal-600 hover:text-teal-800"
+            >
+              <ArrowLeft size={20} className="mr-1" />
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
   }
-  
+
   const labeledSummaryData = summaryData.map((item, index) => ({
     ...item,
-    shortLabel: String.fromCharCode(65 + index)
+    shortLabel: String.fromCharCode(65 + index), // A, B, C, ...
   }));
-  
-  if (quizCompleted) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <UserHeader />
-        <main className="container mx-auto px-4 py-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Quiz Results</h1>
-            <p className="text-gray-600 mt-1">{quiz.title}</p>
-          </div>
-          
-          <div className="space-y-8">
-            {quiz.questions.map((question, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">
-                  Question {index + 1}: {question.text}
-                </h2>
-                
-                {question.showSummary && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-4">Response Distribution</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={labeledSummaryData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="shortLabel" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="count" fill="#6366F1" name="Selected Count" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-                
-                {question.showImpact && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-4">Impact Analysis</h3>
-                    {question.options.map((option) => (
-                      <div key={option._id} className="mb-4 p-4 bg-orange-50 rounded-md">
-                        <p className="font-medium mb-2">{option.text}</p>
-                        <p className="text-orange-700">{option.impact}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {question.showMitigation && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Kinematic Actions</h3>
-                    {question.options.map((option) => (
-                      <div key={option._id} className="mb-4 p-4 bg-green-50 rounded-md">
-                        <p className="font-medium mb-2">{option.text}</p>
-                        <p className="text-green-700">{option.mitigation}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-6">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-            >
-              <ArrowLeft size={18} className="mr-2" />
-              Back to Dashboard
-            </button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-  
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       <UserHeader />
-      
+
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Question Results</h1>
-          <p className="text-gray-600 mt-1">
-            Question {quiz.currentQuestionIndex + 1} of {quiz.questions.length}
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Waiting Room</h1>
+          <p className="text-gray-600 mt-1">{quiz.title}</p>
         </div>
-        
+
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">{currentQuestion.text}</h2>
-            
-            {!currentQuestion.showSummary && (
-              <div className="text-center py-8">
-                <Clock size={40} className="mx-auto mb-4 text-teal-600" />
-                <p className="text-gray-600">Waiting for results...</p>
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-teal-100 text-teal-600 mb-4">
+              <Clock size={32} />
+            </div>
+
+            <h2 className="text-xl font-semibold mb-2">Your Scenario Has Been Submitted!</h2>
+            <p className="text-gray-600 mb-6">
+              Please wait while the instructor reveals the results. The page will update automatically.
+            </p>
+
+            {/* <div className="flex items-center justify-center mb-4">
+              <Users size={20} className="text-teal-600 mr-2" />
+              <span className="text-gray-700">{userCount} {userCount === 1 ? 'participant' : 'participants'} in waiting room</span>
+            </div> */}
+
+            {quiz.showImpact ? (
+              <div className="bg-green-100 text-green-800 p-4 rounded-md mb-4">
+                Impact explanations are now available! Waiting for Kinematic Actions ...
               </div>
-            )}
-            
-            {currentQuestion.showSummary && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <BarChart2 className="mr-2" /> Response Distribution
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={labeledSummaryData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="shortLabel" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="count" fill="#6366F1" name="Selected Count" />
-                    </BarChart>
-                  </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center mt-2 mb-4">
+                <div className="animate-pulse flex space-x-2">
+                  <div className="h-3 w-3 bg-teal-400 rounded-full"></div>
+                  <div className="h-3 w-3 bg-teal-500 rounded-full"></div>
+                  <div className="h-3 w-3 bg-teal-600 rounded-full"></div>
                 </div>
-                
-                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                  {labeledSummaryData.map((item) => (
-                    <div key={item.shortLabel} className="flex items-start">
-                      <span className="font-semibold mr-2">{item.shortLabel}:</span>
-                      <span>{item.optionText}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {currentQuestion.showImpact && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <AlertTriangle className="mr-2" /> Impact Analysis
-                </h3>
-                {currentQuestion.options.map((option) => (
-                  <div key={option._id} className="mb-4 p-4 bg-orange-50 rounded-md">
-                    <p className="font-medium mb-2">{option.text}</p>
-                    <p className="text-orange-700">{option.impact}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {currentQuestion.showMitigation && (
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <ShieldCheck className="mr-2" /> Kinematic Actions
-                </h3>
-                {currentQuestion.options.map((option) => (
-                  <div key={option._id} className="mb-4 p-4 bg-green-50 rounded-md">
-                    <p className="font-medium mb-2">{option.text}</p>
-                    <p className="text-green-700">{option.mitigation}</p>
-                  </div>
-                ))}
               </div>
             )}
           </div>
-          
-          <div className="flex justify-between items-center">
+
+          {/* Summary Section - Only visible when showSummary is true */}
+          {/* {quiz.showSummary && summaryData.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h3 className="text-xl font-semibold mb-4 flex items-center">
+                <BarChart2 className="mr-2" /> Quiz Summary
+              </h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={summaryData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="optionText" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8884d8" name="Selected Count" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-gray-500 text-sm mt-2">
+                Distribution of answers selected by all participants
+              </p>
+            </div>
+          )} */}
+
+          {quiz.showSummary && summaryData.length > 0 && (
+            <ScenarioSummary
+              summaryData={summaryData}
+              labeledSummaryData={labeledSummaryData}
+            />
+          )}
+
+
+          <div className="flex justify-between items-center mt-8">
             <button
               onClick={() => navigate('/dashboard')}
               className="flex items-center py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
@@ -318,6 +250,18 @@ const WaitingRoom = () => {
               <ArrowLeft size={18} className="mr-2" />
               Back to Dashboard
             </button>
+
+            <div className="flex space-x-2">
+              {quiz.showImpact && (
+                <button
+                  onClick={() => navigate(`/quiz/${id}/result`)}
+                  className="flex items-center py-2 px-4 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+                >
+                  View Impact
+                  <MessageSquare size={18} className="ml-2" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </main>

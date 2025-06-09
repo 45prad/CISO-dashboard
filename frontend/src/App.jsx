@@ -34,92 +34,92 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              
+
               {/* Admin Routes */}
-              <Route 
-                path="/admin" 
+              <Route
+                path="/admin"
                 element={
                   <AdminRoute>
                     <AdminDashboard />
                   </AdminRoute>
-                } 
+                }
               />
-              <Route 
-                path="/admin/quiz/create" 
+              <Route
+                path="/admin/quiz/create"
                 element={
                   <AdminRoute>
                     <CreateQuiz />
                   </AdminRoute>
-                } 
+                }
               />
-              <Route 
-                path="/admin/quiz/:id/edit" 
+              <Route
+                path="/admin/quiz/:id/edit"
                 element={
                   <AdminRoute>
                     <EditQuiz />
                   </AdminRoute>
-                } 
+                }
               />
-               <Route 
-                path="/admin/scoreboard" 
+              <Route
+                path="/admin/scoreboard"
                 element={
-                 <AdminRoute>
-                   <ScoreBoard/>
-                   </AdminRoute>
-                  
-                } 
+                  <AdminRoute>
+                    <ScoreBoard />
+                  </AdminRoute>
+
+                }
               />
-              <Route 
-                path="/admin/quiz/:id/monitor" 
+              <Route
+                path="/admin/quiz/:id/monitor"
                 element={
                   <AdminRoute>
                     <QuizMonitor />
                   </AdminRoute>
-                } 
+                }
               />
-              <Route 
-                path="/admin/users" 
+              <Route
+                path="/admin/users"
                 element={
                   <AdminRoute>
                     <ManageUsers />
                   </AdminRoute>
-                } 
+                }
               />
-              
+
               {/* User Routes */}
-              <Route 
-                path="/dashboard" 
+              <Route
+                path="/dashboard"
                 element={
                   <ProtectedRoute>
                     <UserDashboard />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/quiz/:id" 
+              <Route
+                path="/quiz/:id"
                 element={
                   <ProtectedRoute>
                     <TakeQuiz />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/quiz/:id/waiting" 
+              <Route
+                path="/quiz/:id/waiting"
                 element={
                   <ProtectedRoute>
                     <WaitingRoom />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/quiz/:id/result" 
+              <Route
+                path="/quiz/:id/result"
                 element={
                   <ProtectedRoute>
                     <QuizResult />
                   </ProtectedRoute>
-                } 
+                }
               />
-              
+
               {/* Default Route */}
               <Route path="/" element={<Navigate to="/login\" replace />} />
               <Route path="*" element={<Navigate to="/login\" replace />} />

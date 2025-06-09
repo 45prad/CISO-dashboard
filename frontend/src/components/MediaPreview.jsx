@@ -5,7 +5,7 @@ const MediaPreview = ({ filepath }) => {
   const apiUrl = import.meta.env.VITE_BACKENDURL;
   const [blobUrl, setBlobUrl] = useState(null);
 
-  const fetchProtectedImage = async (filepath) => {
+  const fetchProtectedMedia = async (filepath) => {
     try {
       const url = `${apiUrl}${filepath.startsWith('/') ? filepath : '/' + filepath}`;
 
@@ -16,7 +16,7 @@ const MediaPreview = ({ filepath }) => {
       const blobUrl = URL.createObjectURL(response.data);
       return blobUrl;
     } catch (err) {
-      console.error('Error fetching image:', err);
+      console.error('Error fetching media:', err);
       return null;
     }
   };
@@ -24,14 +24,14 @@ const MediaPreview = ({ filepath }) => {
   useEffect(() => {
     let currentUrl;
 
-    const loadImage = async () => {
-      const url = await fetchProtectedImage(filepath);
+    const loadMedia = async () => {
+      const url = await fetchProtectedMedia(filepath);
       setBlobUrl(url);
       currentUrl = url;
     };
 
     if (filepath) {
-      loadImage();
+      loadMedia();
     }
 
     return () => {
@@ -39,10 +39,15 @@ const MediaPreview = ({ filepath }) => {
     };
   }, [filepath]);
 
-  return blobUrl ? (
-    <img src={blobUrl} alt="Media Preview" className="w-full max-w-md" />
+  // Simple check based on file extension
+  const isVideo = filepath?.match(/\.(mp4|webm|ogg)$/i);
+
+  if (!blobUrl) return <p>Loading media...</p>;
+
+  return isVideo ? (
+    <video src={blobUrl} controls className="w-full max-w-md rounded-lg shadow mr-4 border border-1" />
   ) : (
-    <p>Loading image...</p>
+    <img src={blobUrl} alt="Media Preview" className="w-full max-w-md rounded-lg shadow mr-4 border border-1" />
   );
 };
 

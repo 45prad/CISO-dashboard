@@ -191,8 +191,8 @@ const CreateQuiz = () => {
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Create New Quiz</h1>
-              <p className="text-gray-600 mt-1">Design engaging quizzes with multimedia support</p>
+              <h1 className="text-3xl font-bold text-gray-900">Create New Scenario</h1>
+              <p className="text-gray-600 mt-1">Design engaging Scenarioes with multimedia support</p>
             </div>
           </div>
 
@@ -208,16 +208,16 @@ const CreateQuiz = () => {
             </div>
           )}
 
-          {/* Quiz Details */}
+          {/* Scenario Details */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Quiz Title</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Scenario Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Enter quiz title..."
+                placeholder="Enter Scenario title..."
               />
             </div>
             <div>
@@ -226,41 +226,41 @@ const CreateQuiz = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Describe your quiz..."
+                placeholder="Describe your Scenario..."
                 rows="3"
               />
             </div>
           </div>
         </div>
 
-        {/* Question Builder */}
+        {/* Situation Builder */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
             <PlusCircle className="mr-3 text-blue-600" size={24} />
-            Add Question
+            Add Situation
           </h2>
 
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Question Text</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Situation Text</label>
               <textarea
                 value={currentQuestionText}
                 onChange={(e) => setCurrentQuestionText(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Type your question here..."
+                placeholder="Type your Situation here..."
                 rows="3"
               />
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               <FileUploadSection
-                label="Upload Question Image"
+                label="Upload Situation Image"
                 file={currentQuestionMedia.imageFile}
                 onChange={(e) => setCurrentQuestionMedia({ ...currentQuestionMedia, imageFile: e.target.files[0] })}
                 icon={Image}
               />
               <FileUploadSection
-                label="Upload Question Video"
+                label="Upload Situation Video"
                 file={currentQuestionMedia.videoFile}
                 onChange={(e) => setCurrentQuestionMedia({ ...currentQuestionMedia, videoFile: e.target.files[0] })}
                 icon={Video}
@@ -269,7 +269,7 @@ const CreateQuiz = () => {
 
             {/* Options */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Answer Options</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Options</h3>
               <div className="space-y-4">
                 {options.map((opt, i) => (
                   <div key={i} className={`border-2 rounded-xl p-6 transition-all ${opt.isCorrect ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
@@ -343,7 +343,7 @@ const CreateQuiz = () => {
                           value={opt.justification}
                           onChange={(e) => handleOptionChange(i, 'justification', e.target.value)}
                           className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-green-50"
-                          placeholder="Explain why this is the correct answer..."
+                          placeholder="Explain why this is the correct ..."
                           rows="2"
                         />
                       </div>
@@ -381,7 +381,7 @@ const CreateQuiz = () => {
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                 >
                   <Save size={16} />
-                  Add Question
+                  Add Situation
                 </button>
               </div>
             </div>
@@ -391,7 +391,7 @@ const CreateQuiz = () => {
         {/* Questions Preview */}
         {questions.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Questions Preview ({questions.length})</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Situations Preview ({questions.length})</h3>
             <div className="space-y-4">
               {questions.map((q, i) => (
                 <div key={i} className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
@@ -432,12 +432,12 @@ const CreateQuiz = () => {
             {loading ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Saving Quiz...
+                Saving Scenario...
               </>
             ) : (
               <>
                 <Save size={20} />
-                Save Quiz
+                Save Scenario
               </>
             )}
           </button>

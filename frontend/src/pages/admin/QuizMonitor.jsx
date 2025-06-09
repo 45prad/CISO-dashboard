@@ -461,7 +461,7 @@ const QuizMonitor = () => {
 
 
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mt-8">
+        {/* <div className="bg-white rounded-lg shadow-md overflow-hidden mt-8">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold">Scenario Submissions</h3>
           </div>
@@ -512,7 +512,7 @@ const QuizMonitor = () => {
               </tbody>
             </table>
           )}
-        </div>
+        </div> */}
       </main>
     </div>
   );

@@ -182,7 +182,7 @@ const EditQuiz = () => {
   };
 
   const handleDelete = async () => {
-    const confirm = window.confirm('Are you sure you want to delete this quiz?');
+    const confirm = window.confirm('Are you sure you want to delete this Scenario?');
     if (!confirm) return;
     try {
       await axios.delete(`${backendUrl}/api/quizzes/${id}`);
@@ -250,7 +250,7 @@ const EditQuiz = () => {
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading quiz...</span>
+              <span className="ml-3 text-gray-600">Loading Scenario...</span>
             </div>
           </div>
         </main>
@@ -292,8 +292,8 @@ const EditQuiz = () => {
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Quiz</h1>
-              <p className="text-gray-600 mt-1">Modify your quiz content and settings</p>
+              <h1 className="text-3xl font-bold text-gray-900">Edit Scenario</h1>
+              <p className="text-gray-600 mt-1">Modify your Scenario content and settings</p>
             </div>
           </div>
           {error && (
@@ -308,16 +308,16 @@ const EditQuiz = () => {
             </div>
           )}
 
-          {/* Quiz Details */}
+          {/* Scenario Details */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Quiz Title</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Scenario Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Enter quiz title..."
+                placeholder="Enter Scenario title..."
               />
             </div>
             <div>
@@ -326,7 +326,7 @@ const EditQuiz = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Describe your quiz..."
+                placeholder="Describe your Scenario..."
                 rows="3"
               />
             </div>
@@ -339,7 +339,7 @@ const EditQuiz = () => {
               className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
             >
               <Trash2 size={18} />
-              Delete Quiz
+              Delete Scenario
             </button>
           </div>
         </div>
@@ -356,9 +356,14 @@ const EditQuiz = () => {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900">{q.text}</h3>
                   </div>
-                  {q.imageUrl && (
-                    <MediaPreview filepath={q.imageUrl} />
-                  )}
+                  <div className="flex flex-row">
+                    {q.imageUrl && (
+                      <MediaPreview filepath={q.imageUrl} />
+                    )}
+                    {q.videoUrl && (
+                      <MediaPreview filepath={q.videoUrl} />
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => removeQuestion(qIndex)}
@@ -372,11 +377,11 @@ const EditQuiz = () => {
               <div className="mb-6 space-y-4">
                 <h4 className="font-medium text-gray-700 flex items-center gap-2">
                   <FileText size={16} />
-                  Question Media
+                  Situation Media
                 </h4>
                 <div className="grid md:grid-cols-2 gap-4">
                   <FileUploadSection
-                    label="Upload Question Image"
+                    label="Upload Situation Image"
                     file={mediaMap[qIndex]?.imageFile}
                     existingMedia={q.imageName}
                     onChange={e => handleFileChange(qIndex, 'questionImage', e.target.files[0])}
@@ -384,7 +389,7 @@ const EditQuiz = () => {
                     accept="image/png, image/jpeg, image/jpg"
                   />
                   <FileUploadSection
-                    label="Upload Question Video"
+                    label="Upload Situation Video"
                     file={mediaMap[qIndex]?.videoFile}
                     existingMedia={q.videoName}
                     onChange={e => handleFileChange(qIndex, 'questionVideo', e.target.files[0])}
@@ -396,7 +401,7 @@ const EditQuiz = () => {
 
               {/* Options */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-700">Answer Options</h4>
+                <h4 className="font-medium text-gray-700">Options</h4>
                 {q.options.map((opt, oIndex) => (
                   <div key={oIndex} className={`border-2 rounded-xl p-6 transition-all ${opt.isCorrect ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
                     <div className="flex items-start gap-4 mb-4">
@@ -439,17 +444,17 @@ const EditQuiz = () => {
                         />
                       </div>
                       <div className="grid lg:grid-cols-4 grid-cols-1 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
-                        <input
-                          type="number"
-                          value={opt.score}
-                          onChange={(e) => handleOptionChange(qIndex, oIndex,'score', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Assign Priority Score..."
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                          <input
+                            type="number"
+                            value={opt.score}
+                            onChange={(e) => handleOptionChange(qIndex, oIndex, 'score', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="Assign Priority Score..."
+                          />
+                        </div>
                       </div>
-                    </div>
                       {opt.isCorrect &&
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Justification</label>
@@ -491,6 +496,15 @@ const EditQuiz = () => {
                           )}
                         </div>
                       )}
+                      {opt.videoUrl && (
+                        <div className="md:col-span-2 mt-4 flex gap-4">
+                          {opt.videoUrl && (
+                            <div className="w-32 h-32 border rounded overflow-hidden">
+                              <MediaPreview filepath={opt.videoUrl} />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -509,12 +523,12 @@ const EditQuiz = () => {
             {saving ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Saving Quiz...
+                Saving Scenario...
               </>
             ) : (
               <>
                 <Save size={20} />
-                Update Quiz
+                Update Scenario
               </>
             )}
           </button>

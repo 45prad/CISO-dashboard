@@ -86,7 +86,7 @@ const ResponseStats = ({ questionText, options }) => {
                             boxShadow: `0 10px 25px -5px ${chartColors[index % chartColors.length]}40`
                         } : {}}
                     >
-                        Option {index + 1}
+                        Option {String.fromCharCode(65 + index)}
                         <span className={`ml-2 px-2 py-0.5 rounded-md text-xs ${
                             selectedFilter === option.optionId 
                                 ? 'bg-white/20 text-white' 

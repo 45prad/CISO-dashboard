@@ -205,7 +205,7 @@ const TakeQuiz = () => {
   }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+  const progress = ((currentQuestionIndex) / quiz.questions.length) * 100;
   const answeredQuestions = Object.keys(selectedOptions).length;
 
   return (
@@ -217,14 +217,14 @@ const TakeQuiz = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Scenario Header Card */}
-            <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden" style={{ backgroundColor: '#00174D' }}>
-              <div className="p-6 text-white">
+            <div className="text-xl bg-blue-50 rounded-xl shadow-md mb-6 overflow-hidden">
+              <div className="p-6  text-blue-900">
                 <div className="flex items-center space-x-3 mb-3">
-                  <Award className="h-6 w-6" />
-                  <span className="text-blue-100 text-sm font-medium uppercase tracking-wider">Strategic Scenario</span>
+                  <Award className="h-4 w-4" />
+                  <span className=" text-blue-900 text-sm font-medium uppercase tracking-wider">Strategic Scenario</span>
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-bold mb-3">{quiz.title}</h1>
-                <p className="text-blue-100 leading-relaxed">{quiz.description}</p>
+                <h1 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">{quiz.title}</h1>
+                <p className="mt-2 text-blue-800 text-sm leading-relaxed">{quiz.description}</p>
               </div>
             </div>
 
@@ -232,13 +232,17 @@ const TakeQuiz = () => {
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="p-6">
 
-                <h2 className="text-xl lg:text-xl text-gray-900 leading-tight mb-6">
+                <h2 className="text-md text-gray-900 leading-tight mb-6">
                   {currentQuestion.text}
                 </h2>
-
-                {currentQuestion.imageUrl &&
-                  <MediaPreview filepath={currentQuestion.imageUrl} />
-                }
+                <div className="flex flex-row items-center justify-center overflow-x-auto mb-6">
+                  {currentQuestion.imageUrl &&
+                    <MediaPreview filepath={currentQuestion.imageUrl} />
+                  }
+                  {currentQuestion.videoUrl &&
+                    <MediaPreview filepath={currentQuestion.videoUrl} />
+                  }
+                </div>
                 {quiz.showOptions ? (
                   <div className="space-y-4">
                     {currentQuestion.options.map((option, index) => {
@@ -282,6 +286,15 @@ const TakeQuiz = () => {
                                   {option.imageUrl && (
                                     <div className="w-32 h-32 border rounded overflow-hidden">
                                       <MediaPreview filepath={option.imageUrl} />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {option.videoUrl && (
+                                <div className="md:col-span-2 mt-4 flex gap-4">
+                                  {option.videoUrl && (
+                                    <div className="w-32 h-32 border rounded overflow-hidden">
+                                      <MediaPreview filepath={option.videoUrl} />
                                     </div>
                                   )}
                                 </div>
@@ -359,7 +372,7 @@ const TakeQuiz = () => {
                   <button
                     onClick={handleSubmit}
                     disabled={submitting}
-                    className="flex items-center px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <>

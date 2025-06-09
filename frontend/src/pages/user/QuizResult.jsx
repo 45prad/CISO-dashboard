@@ -170,7 +170,7 @@ const QuizResult = () => {
         <UserHeader />
         <div className="container mx-auto px-4 py-6">
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         </div>
       </div>
@@ -189,7 +189,7 @@ const QuizResult = () => {
           <div className="mt-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center text-teal-600 hover:text-teal-800"
+              className="flex items-center text-blue-600 hover:text-blue-800"
             >
               <ArrowLeft size={20} className="mr-1" />
               Back to Dashboard
@@ -223,7 +223,7 @@ const QuizResult = () => {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Close
               </button>
@@ -388,7 +388,7 @@ const QuizResult = () => {
         <div className="flex justify-start">
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center py-2 px-4 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+            className="flex items-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <ArrowLeft size={18} className="mr-2" />
             Back to Dashboard

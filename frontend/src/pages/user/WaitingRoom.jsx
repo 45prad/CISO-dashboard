@@ -133,7 +133,7 @@ const WaitingRoom = () => {
         <UserHeader />
         <div className="container mx-auto px-4 py-6">
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ const WaitingRoom = () => {
           <div className="mt-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center text-teal-600 hover:text-teal-800"
+              className="flex items-center text-blue-600 hover:text-blue-800"
             >
               <ArrowLeft size={20} className="mr-1" />
               Back to Dashboard
@@ -181,7 +181,7 @@ const WaitingRoom = () => {
 
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-md p-6 mb-6 text-center">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-teal-100 text-teal-600 mb-4">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 text-blue-600 mb-4">
               <Clock size={32} />
             </div>
 
@@ -196,15 +196,15 @@ const WaitingRoom = () => {
             </div> */}
 
             {quiz.showImpact ? (
-              <div className="bg-green-100 text-green-800 p-4 rounded-md mb-4">
+              <div className="bg-blue-100 text-blue-800 p-4 rounded-md mb-4">
                 Impact explanations are now available! Waiting for Kinematic Actions ...
               </div>
             ) : (
               <div className="flex items-center justify-center mt-2 mb-4">
                 <div className="animate-pulse flex space-x-2">
-                  <div className="h-3 w-3 bg-teal-400 rounded-full"></div>
-                  <div className="h-3 w-3 bg-teal-500 rounded-full"></div>
-                  <div className="h-3 w-3 bg-teal-600 rounded-full"></div>
+                  <div className="h-3 w-3 bg-blue-400 rounded-full"></div>
+                  <div className="h-3 w-3 bg-blue-500 rounded-full"></div>
+                  <div className="h-3 w-3 bg-blue-600 rounded-full"></div>
                 </div>
               </div>
             )}
@@ -255,7 +255,7 @@ const WaitingRoom = () => {
               {quiz.showImpact && (
                 <button
                   onClick={() => navigate(`/quiz/${id}/result`)}
-                  className="flex items-center py-2 px-4 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+                  className="flex items-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                   View Impact
                   <MessageSquare size={18} className="ml-2" />

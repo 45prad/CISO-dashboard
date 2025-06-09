@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import UserHeader from '../../components/UserHeader';
 import AuthContext from '../../context/AuthContext';
+import SocketContext from '../../context/SocketContext';
 
 const TakeQuiz = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
   const { id } = useParams();
   const [quiz, setQuiz] = useState(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOptions, setSelectedOptions] = useState({});
+  const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   
   const { user } = useContext(AuthContext);
+  const { socket, joinQuizRoom } = useContext(SocketContext);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -23,81 +24,74 @@ const TakeQuiz = () => {
       try {
         const { data } = await axios.get(`${backendUrl}/api/quizzes/${id}`);
         
-        // Check if quiz is active
         if (!data.isActive) {
-          setError('This quiz is not currently active');
+          setError('This scenario is not currently active');
           setLoading(false);
-          return;
-        }
-        
-        // Check if user has already submitted this quiz
-        const submissionsRes = await axios.get(`${backendUrl}/api/submissions/user`);
-        const hasSubmitted = submissionsRes.data.some(sub => sub.quiz === id || sub.quiz._id === id);
-        
-        if (hasSubmitted) {
-          navigate(`/quiz/${id}/result`);
           return;
         }
         
         setQuiz(data);
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch quiz');
+        setError(err.response?.data?.message || 'Failed to fetch scenario');
         setLoading(false);
       }
     };
     
     fetchQuiz();
-  }, [id, navigate]);
-  
-  const handleOptionSelect = (questionId, optionId) => {
-    setSelectedOptions({
-      ...selectedOptions,
-      [questionId]: optionId
-    });
-  };
-  
-  const goToNextQuestion = () => {
-    if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
-  
-  const goToPreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-  
-  const handleSubmit = async () => {
-    // Check if all questions have been answered
-    const allQuestionsAnswered = quiz.questions.every(question => 
-      selectedOptions[question._id] !== undefined
-    );
     
-    if (!allQuestionsAnswered) {
-      setError('Please answer all questions before submitting');
-      return;
+    if (socket) {
+      joinQuizRoom(id);
+      
+      socket.on('questionShown', ({ questionIndex }) => {
+        setQuiz(prev => ({
+          ...prev,
+          currentQuestionIndex: questionIndex,
+          questions: prev.questions.map((q, i) => ({
+            ...q,
+            isVisible: i === questionIndex
+          }))
+        }));
+      });
+      
+      socket.on('optionsShown', ({ questionIndex }) => {
+        setQuiz(prev => ({
+          ...prev,
+          questions: prev.questions.map((q, i) => ({
+            ...q,
+            optionsVisible: i === questionIndex ? true : q.optionsVisible
+          }))
+        }));
+      });
     }
+    
+    return () => {
+      if (socket) {
+        socket.off('questionShown');
+        socket.off('optionsShown');
+      }
+    };
+  }, [id, socket]);
+  
+  const handleOptionSelect = async (optionId) => {
+    if (submitting) return;
     
     try {
       setSubmitting(true);
       
-      // Format answers for submission
-      const answers = Object.keys(selectedOptions).map(questionId => ({
-        questionId,
-        selectedOption: selectedOptions[questionId]
-      }));
-      
       await axios.post(`${backendUrl}/api/submissions`, {
         quizId: id,
-        answers
+        answers: [{
+          questionId: quiz.questions[quiz.currentQuestionIndex]._id,
+          selectedOption: optionId
+        }]
       });
       
+      setSelectedOption(optionId);
       setSubmitting(false);
       navigate(`/quiz/${id}/waiting`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit quiz');
+      setError(err.response?.data?.message || 'Failed to submit answer');
       setSubmitting(false);
     }
   };
@@ -139,21 +133,25 @@ const TakeQuiz = () => {
     );
   }
   
-  if (!quiz) {
+  const currentQuestion = quiz.questions[quiz.currentQuestionIndex];
+  
+  if (!currentQuestion?.isVisible) {
     return (
       <div className="min-h-screen bg-gray-50">
         <UserHeader />
         <div className="container mx-auto px-4 py-6">
-          <div className="bg-red-100 text-red-700 p-4 rounded-md">
-            Scenario not found
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4">Waiting for the scenario to begin...</h2>
+            <div className="animate-pulse flex space-x-2 justify-center">
+              <div className="h-3 w-3 bg-teal-400 rounded-full"></div>
+              <div className="h-3 w-3 bg-teal-500 rounded-full"></div>
+              <div className="h-3 w-3 bg-teal-600 rounded-full"></div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
-  
-  const currentQuestion = quiz.questions[currentQuestionIndex];
-  const progress = Math.round(((currentQuestionIndex + 1) / quiz.questions.length) * 100);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -162,101 +160,49 @@ const TakeQuiz = () => {
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
-          <p className="text-gray-600 mt-1">{quiz.description}</p>
+          <p className="text-gray-600 mt-1">Question {quiz.currentQuestionIndex + 1} of {quiz.questions.length}</p>
         </div>
-        
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-600">Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
-            <span className="text-sm font-medium text-teal-600">{progress}% Complete</span>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full">
-            <div 
-              className="h-2 bg-teal-600 rounded-full" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-        </div>
-        
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md flex items-start">
-            <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
         
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">{currentQuestion.text}</h2>
           
-          <div className="space-y-3">
-            {currentQuestion.options.map(option => (
-              <div
-                key={option._id}
-                className={`border rounded-md p-4 cursor-pointer transition-colors ${
-                  selectedOptions[currentQuestion._id] === option._id
-                    ? 'border-teal-500 bg-teal-50'
-                    : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
-                }`}
-                onClick={() => handleOptionSelect(currentQuestion._id, option._id)}
-              >
-                <div className="flex items-start">
-                  <div className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center border ${
-                    selectedOptions[currentQuestion._id] === option._id
-                      ? 'border-teal-500 bg-teal-500'
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedOptions[currentQuestion._id] === option._id && (
-                      <CheckCircle size={16} className="text-white" />
-                    )}
+          {currentQuestion.optionsVisible ? (
+            <div className="space-y-3">
+              {currentQuestion.options.map(option => (
+                <button
+                  key={option._id}
+                  onClick={() => handleOptionSelect(option._id)}
+                  disabled={selectedOption !== null}
+                  className={`w-full border rounded-md p-4 text-left transition-colors ${
+                    selectedOption === option._id
+                      ? 'border-teal-500 bg-teal-50'
+                      : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
+                  }`}
+                >
+                  <div className="flex items-start">
+                    <div className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center border ${
+                      selectedOption === option._id
+                        ? 'border-teal-500 bg-teal-500'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedOption === option._id && (
+                        <CheckCircle size={16} className="text-white" />
+                      )}
+                    </div>
+                    <span className="ml-3 text-gray-800">{option.text}</span>
                   </div>
-                  <span className="ml-3 text-gray-800">{option.text}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="flex justify-between">
-          <button
-            onClick={goToPreviousQuestion}
-            disabled={currentQuestionIndex === 0}
-            className={`flex items-center py-2 px-4 rounded-md ${
-              currentQuestionIndex === 0
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-            } transition-colors`}
-          >
-            <ArrowLeft size={18} className="mr-2" />
-            Previous
-          </button>
-          
-          {currentQuestionIndex < quiz.questions.length - 1 ? (
-            <button
-              onClick={goToNextQuestion}
-              className="flex items-center py-2 px-4 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
-            >
-              Next
-              <ArrowRight size={18} className="ml-2" />
-            </button>
+                </button>
+              ))}
+            </div>
           ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex items-center py-2 px-6 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  Submit Scenario
-                  <CheckCircle size={18} className="ml-2" />
-                </>
-              )}
-            </button>
+            <div className="text-center py-8">
+              <p className="text-gray-600">Waiting for options to be revealed...</p>
+              <div className="animate-pulse flex space-x-2 justify-center mt-4">
+                <div className="h-3 w-3 bg-teal-400 rounded-full"></div>
+                <div className="h-3 w-3 bg-teal-500 rounded-full"></div>
+                <div className="h-3 w-3 bg-teal-600 rounded-full"></div>
+              </div>
+            </div>
           )}
         </div>
       </main>

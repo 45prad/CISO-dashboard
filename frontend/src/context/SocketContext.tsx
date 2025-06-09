@@ -6,22 +6,12 @@ interface SocketContextType {
   socket: Socket | null;
   joinQuizRoom: (quizId: string) => void;
   leaveQuizRoom: (quizId: string) => void;
-  adminShowImpact: (quizId: string) => void;
-  adminShowMitigation: (quizId: string) => void;
-  adminActivateQuiz: (quizId: string) => void;
-  adminDeactivateQuiz: (quizId: string) => void;
-  adminShowSummary: (quizId: string) => void;
 }
 
 export const SocketContext = createContext<SocketContextType>({
   socket: null,
   joinQuizRoom: () => {},
   leaveQuizRoom: () => {},
-  adminShowImpact: () => {},
-  adminShowMitigation: () => {},
-  adminActivateQuiz: () => {},
-  adminDeactivateQuiz: () => {},
-  adminShowSummary:()=>{},
 });
 
 interface SocketProviderProps {
@@ -34,7 +24,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    // Initialize socket connection
     const newSocket = io(window.location.hostname === '13.235.75.80' 
       ? `${backendUrl}` 
       : window.location.origin
@@ -42,7 +31,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     
     setSocket(newSocket);
 
-    // Clean up on unmount
     return () => {
       newSocket.disconnect();
     };
@@ -68,46 +56,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
-  const adminShowSummary = (quizId: string) => {
-  if (socket && user && user.role === 'admin') {
-    socket.emit('adminShowSummary', { quizId });
-  }
-};
-
-  const adminShowImpact = (quizId: string) => {
-    if (socket && user && user.role === 'admin') {
-      socket.emit('adminShowImpact', { quizId });
-    }
-  };
-
-  const adminShowMitigation = (quizId: string) => {
-    if (socket && user && user.role === 'admin') {
-      socket.emit('adminShowMitigation', { quizId });
-    }
-  };
-
-  const adminActivateQuiz = (quizId: string) => {
-    if (socket && user && user.role === 'admin') {
-      socket.emit('adminActivateQuiz', { quizId });
-    }
-  };
-
-  const adminDeactivateQuiz = (quizId: string) => {
-    if (socket && user && user.role === 'admin') {
-      socket.emit('adminDeactivateQuiz', { quizId });
-    }
-  };
-
   return (
     <SocketContext.Provider value={{
       socket,
       joinQuizRoom,
-      leaveQuizRoom,
-      adminShowImpact,
-      adminShowMitigation,
-      adminActivateQuiz,
-      adminDeactivateQuiz,
-      adminShowSummary
+      leaveQuizRoom
     }}>
       {children}
     </SocketContext.Provider>

@@ -217,8 +217,8 @@ const TakeQuiz = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* Scenario Header Card */}
-            <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+            <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden" style={{ backgroundColor: '#00174D' }}>
+              <div className="p-6 text-white">
                 <div className="flex items-center space-x-3 mb-3">
                   <Award className="h-6 w-6" />
                   <span className="text-blue-100 text-sm font-medium uppercase tracking-wider">Strategic Scenario</span>
@@ -232,12 +232,13 @@ const TakeQuiz = () => {
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="p-6">
 
-                <h2 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight mb-6">
+                <h2 className="text-xl lg:text-xl text-gray-900 leading-tight mb-6">
                   {currentQuestion.text}
                 </h2>
 
-                <MediaPreview filepath={currentQuestion.imageUrl} />
-
+                {currentQuestion.imageUrl &&
+                  <MediaPreview filepath={currentQuestion.imageUrl} />
+                }
                 {quiz.showOptions ? (
                   <div className="space-y-4">
                     {currentQuestion.options.map((option, index) => {

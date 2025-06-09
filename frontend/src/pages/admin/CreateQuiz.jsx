@@ -12,7 +12,7 @@ const CreateQuiz = () => {
   const [currentQuestionText, setCurrentQuestionText] = useState('');
   const [currentQuestionMedia, setCurrentQuestionMedia] = useState({ imageFile: null, videoFile: null });
   const [options, setOptions] = useState([
-    { text: '', isCorrect: false, impact: '', mitigation: '', justification: '', imageFile: null, videoFile: null }
+    { text: '', isCorrect: false, impact: '', mitigation: '', score: 0, justification: '', imageFile: null, videoFile: null }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -108,6 +108,7 @@ const CreateQuiz = () => {
             impact: opt.impact,
             mitigation: opt.mitigation,
             justification: opt.justification,
+            score: opt.score,
             imageName: opt.imageFile ? `option-${qIndex}-${oIndex}-${opt.imageFile.name}` : null,
             videoName: opt.videoFile ? `option-${qIndex}-${oIndex}-${opt.videoFile.name}` : null,
           }))
@@ -178,13 +179,13 @@ const CreateQuiz = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <AdminHeader />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex items-center mb-6">
-            <button 
-              onClick={() => navigate('/admin')} 
+            <button
+              onClick={() => navigate('/admin')}
               className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-600" />
@@ -275,9 +276,8 @@ const CreateQuiz = () => {
                     <div className="flex items-start gap-4 mb-4">
                       <button
                         onClick={() => handleOptionChange(i, 'isCorrect', true)}
-                        className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                          opt.isCorrect ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-green-400'
-                        }`}
+                        className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${opt.isCorrect ? 'border-green-500 bg-green-500' : 'border-gray-300 hover:border-green-400'
+                          }`}
                       >
                         {opt.isCorrect && <CheckCircle size={12} className="text-white" />}
                       </button>
@@ -319,6 +319,19 @@ const CreateQuiz = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                           placeholder="Mitigation strategy..."
                           rows="2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid lg:grid-cols-4 grid-cols-1 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                        <input
+                          type="number"
+                          value={opt.score}
+                          onChange={(e) => handleOptionChange(i, 'score', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          placeholder="Assign Priority Score..."
                         />
                       </div>
                     </div>
@@ -395,9 +408,8 @@ const CreateQuiz = () => {
                   </div>
                   <div className="grid gap-2">
                     {q.options.map((o, j) => (
-                      <div key={j} className={`p-3 rounded-lg flex items-center gap-2 ${
-                        o.isCorrect ? 'bg-green-100 border border-green-300' : 'bg-gray-50 border border-gray-200'
-                      }`}>
+                      <div key={j} className={`p-3 rounded-lg flex items-center gap-2 ${o.isCorrect ? 'bg-green-100 border border-green-300' : 'bg-gray-50 border border-gray-200'
+                        }`}>
                         <div className={`w-3 h-3 rounded-full ${o.isCorrect ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                         <span className="text-sm">{o.text}</span>
                         {o.isCorrect && <CheckCircle size={16} className="text-green-600 ml-auto" />}

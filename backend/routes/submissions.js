@@ -75,8 +75,8 @@ router.post('/', protect, async (req, res) => {
       const question = quiz.questions.id(answer.questionId);
       if (question) {
         const selectedOption = question.options.id(answer.selectedOption);
-        if (selectedOption && selectedOption.isCorrect) {
-          score += 1;
+        if (selectedOption) {
+          score += selectedOption.score || 0; // Add score of the selected option
         }
       }
     });

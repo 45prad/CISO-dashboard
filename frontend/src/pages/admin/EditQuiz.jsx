@@ -438,6 +438,18 @@ const EditQuiz = () => {
                           rows="2"
                         />
                       </div>
+                      <div className="grid lg:grid-cols-4 grid-cols-1 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                        <input
+                          type="number"
+                          value={opt.score}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex,'score', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          placeholder="Assign Priority Score..."
+                        />
+                      </div>
+                    </div>
                       {opt.isCorrect &&
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Justification</label>

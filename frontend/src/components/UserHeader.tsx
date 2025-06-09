@@ -29,13 +29,13 @@ const UserHeader: React.FC = () => {
           
           {/* Desktop menu */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/dashboard" className="hover:text-teal-200 transition-colors">My Scenarios</Link>
+            <Link to="/dashboard" className="hover:text-blue-200 transition-colors">My Scenarios</Link>
             
             <div className="flex items-center ml-6">
               <span className="mr-4">Hi, {user?.name}</span>
               <button 
                 onClick={handleLogout}
-                className="flex items-center bg-teal-700 hover:bg-teal-800 px-3 py-2 rounded transition-colors"
+                className="flex items-center bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded transition-colors"
               >
                 <LogOut size={18} className="mr-2" />
                 Logout
@@ -50,14 +50,14 @@ const UserHeader: React.FC = () => {
             <div className="flex flex-col space-y-3">
               <Link 
                 to="/dashboard" 
-                className="hover:bg-teal-700 px-2 py-2 rounded transition-colors"
+                className="hover:bg-blue-700 px-2 py-2 rounded transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 My Scenarios
               </Link>
               <button 
                 onClick={handleLogout}
-                className="flex items-center bg-teal-700 hover:bg-teal-800 px-3 py-2 rounded transition-colors"
+                className="flex items-center bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded transition-colors"
               >
                 <LogOut size={18} className="mr-2" />
                 Logout

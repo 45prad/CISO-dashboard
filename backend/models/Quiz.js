@@ -26,6 +26,10 @@ const OptionSchema = new mongoose.Schema({
   },
   videoUrl: {
     type: String // Optional field for video
+  },
+  score: {
+    type: Number,
+    default: 0,
   }
 });
 

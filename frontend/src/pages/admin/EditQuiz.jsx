@@ -5,6 +5,10 @@ import { AuthContext } from '../../context/AuthContext';
 import AdminHeader from '../../components/AdminHeader';
 import { Upload, Image, Video, X, Save, Trash2, AlertCircle, CheckCircle2, FileText, ArrowLeft } from 'lucide-react';
 import MediaPreview from '../../components/MediaPreview';
+import FileUploadSection from '../../components/Partials/FileUploadSection';
+import LoadingScreen from '../../components/Partials/Loading';
+import ErrorAlert from '../../components/Partials/ErrorAlert';
+import KinematicActionsSection from '../../components/Quiz/KinematicActions';
 
 const EditQuiz = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -146,6 +150,7 @@ const EditQuiz = () => {
     formData.append('title', title);
     formData.append('description', description);
     const preparedQuestions = questions.map((q, qIndex) => {
+      q.kinematicActions = q.kinematicActions || [];
       const media = mediaMap[qIndex] || {};
       if (media.imageName) q.imageName = media.imageName;
       if (media.videoName) q.videoName = media.videoName;
@@ -192,69 +197,9 @@ const EditQuiz = () => {
     }
   };
 
-  const FileUploadSection = ({ label, file, onChange, icon: Icon, accept = "image/png, image/jpeg, image/jpg, video/mp4, video/mov, video/avi, video/quicktime", existingMedia }) => (
-    <div className="space-y-3">
-      <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 cursor-pointer transition-all duration-200 group">
-        <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-blue-100 transition-colors">
-          <Icon size={20} className="text-gray-600 group-hover:text-blue-600" />
-        </div>
-        <div>
-          <div className="font-medium text-gray-700">{label}</div>
-          <div className="text-sm text-gray-500">Click to upload or drag and drop</div>
-        </div>
-        <input
-          type="file"
-          accept={accept}
-          onChange={onChange}
-          className="hidden"
-        />
-      </label>
-
-      {/* Show existing media from database */}
-      {existingMedia && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">Current file:</span>
-            <span className="text-sm text-blue-700">{existingMedia}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Show new uploaded file */}
-      {file && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-600" />
-              <span className="text-sm font-medium text-green-800">New file:</span>
-              <span className="text-sm text-green-700 truncate">{file.name || file}</span>
-            </div>
-            <button
-              onClick={() => onChange({ target: { files: [null] } })}
-              className="p-1 hover:bg-red-100 rounded-lg transition-colors"
-            >
-              <X size={16} className="text-red-500" />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <AdminHeader />
-        <main className="container mx-auto px-4 py-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Loading Scenario...</span>
-            </div>
-          </div>
-        </main>
-      </div>
+      <LoadingScreen />
     );
   }
 
@@ -262,20 +207,17 @@ const EditQuiz = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <AdminHeader />
-        <main className="container mx-auto px-4 py-8">
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-            <div className="flex">
-              <AlertCircle className="text-red-400 mr-3 mt-0.5" size={20} />
-              <div>
-                <p className="text-red-800 font-medium">Error</p>
-                <p className="text-red-700">{error}</p>
-              </div>
-            </div>
-          </div>
-        </main>
+        <ErrorAlert title='Error' error={error} />
       </div>
     );
   }
+
+  const handleKinematicChange = (qIndex, updatedActions) => {
+    const updated = [...questions];
+    updated[qIndex].kinematicActions = updatedActions;
+    setQuestions(updated);
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -433,16 +375,6 @@ const EditQuiz = () => {
                           rows="2"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Mitigation</label>
-                        <textarea
-                          value={opt.mitigation}
-                          onChange={(e) => handleOptionChange(qIndex, oIndex, 'mitigation', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Mitigation strategy..."
-                          rows="2"
-                        />
-                      </div>
                       <div className="grid lg:grid-cols-4 grid-cols-1 gap-4 mb-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
@@ -509,9 +441,16 @@ const EditQuiz = () => {
                   </div>
                 ))}
               </div>
+              <KinematicActionsSection
+                initialActions={q.kinematicActions || []}
+                onChange={(updatedActions) => handleKinematicChange(qIndex, updatedActions)}
+              />
+
             </div>
           ))}
         </div>
+
+
 
         {/* Submit Button */}
         < div className="flex justify-end" >

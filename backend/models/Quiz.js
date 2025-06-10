@@ -13,10 +13,6 @@ const OptionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  mitigation: {
-    type: String,
-    required: true
-  },
   justification: {
     type: String,
     required: function() { return this.isCorrect; } // Only required if isCorrect is true
@@ -33,6 +29,20 @@ const OptionSchema = new mongoose.Schema({
   }
 });
 
+// New Kinematic Action Schema
+const KinematicActionSchema = new mongoose.Schema({
+  action: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    required: true,
+    trim: true
+  },
+});
+
 const QuestionSchema = new mongoose.Schema({
   text: {
     type: String,
@@ -44,7 +54,8 @@ const QuestionSchema = new mongoose.Schema({
   videoUrl: {
     type: String // Optional field for question video
   },
-  options: [OptionSchema]
+  options: [OptionSchema],
+  kinematicActions: [KinematicActionSchema],
 });
 
 const QuizSchema = new mongoose.Schema({

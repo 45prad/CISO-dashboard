@@ -32,11 +32,6 @@ router.post('/', protect, admin, upload.fields([
 
     const questions = parsedQuestions.map((q, qIndex) => {
       // Attach image/video if filenames are provided
-      console.log("q>> ");
-      console.log(q);
-      console.log(questionMedia);
-
-
       const imageUrl = getFileUrlByOriginalName(questionMedia, q?.imageName);
       const videoUrl = getFileUrlByOriginalName(questionMedia, q?.videoName);
 
@@ -46,11 +41,17 @@ router.post('/', protect, admin, upload.fields([
         videoUrl: opt.videoName ? getFileUrlByOriginalName(optionMedia, opt.videoName) : null,
       }));
 
+      const kinematicActions = q.kinematicActions.map((action) => ({
+        action: action.action,
+        description: action.description,
+      }));
+
       return {
         text: q.text,
         imageUrl,
         videoUrl,
-        options
+        options,
+        kinematicActions,
       };
     });
 
@@ -178,11 +179,18 @@ router.put('/:id', protect, admin, upload.fields([
           };
         });
 
+        
+      const kinematicActions = q.kinematicActions.map((action) => ({
+        action: action.action,
+        description: action.description,
+      }));
+
         return {
           text: q.text,
           imageUrl,
           videoUrl,
-          options
+          options,
+          kinematicActions,
         };
       });
     }
@@ -376,7 +384,7 @@ router.put('/:id/mitigation', protect, admin, async (req, res) => {
 router.put('/:id/question/:questionIndex/show', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
@@ -398,7 +406,7 @@ router.put('/:id/question/:questionIndex/show', protect, admin, async (req, res)
 router.put('/:id/question/:questionIndex/options', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
@@ -419,7 +427,7 @@ router.put('/:id/question/:questionIndex/options', protect, admin, async (req, r
 router.put('/:id/question/:questionIndex/summary', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
@@ -440,7 +448,7 @@ router.put('/:id/question/:questionIndex/summary', protect, admin, async (req, r
 router.put('/:id/question/:questionIndex/impact', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
@@ -461,7 +469,7 @@ router.put('/:id/question/:questionIndex/impact', protect, admin, async (req, re
 router.put('/:id/question/:questionIndex/mitigation', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
@@ -482,7 +490,7 @@ router.put('/:id/question/:questionIndex/mitigation', protect, admin, async (req
 router.put('/:id/nextQuestion', protect, admin, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
-    
+
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }

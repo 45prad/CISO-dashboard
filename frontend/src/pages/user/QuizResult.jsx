@@ -234,47 +234,9 @@ const QuizResult = () => {
 
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Impact Analysis & Mitigation</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Impact Analysis & Actions</h1>
           <p className="text-gray-600 mt-1">{quiz.title}</p>
         </div>
-
-        {/* Results summary */}
-        {/* <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-            <div className="mb-4 sm:mb-0">
-              <h2 className="text-xl font-semibold">Your Score</h2>
-              <p className="text-gray-600">
-                You answered {submission.score} out of {quiz.questions.length} Situation correctly
-              </p>
-            </div>
-            
-            <div className="bg-teal-100 text-teal-800 text-xl font-bold rounded-full h-20 w-20 flex items-center justify-center">
-              {Math.round((submission.score / quiz.questions.length) * 100)}%
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 rounded-md ${quiz.showImpact ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'}`}>
-              <div className="flex items-center">
-                <AlertTriangle size={20} className="mr-2" />
-                <h3 className="font-semibold">Impact Explanations</h3>
-              </div>
-              <p className="mt-1 text-sm">
-                {quiz.showImpact ? 'Available' : 'Not yet available'}
-              </p>
-            </div>
-            
-            <div className={`p-4 rounded-md ${quiz.showMitigation ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-              <div className="flex items-center">
-                <ShieldCheck size={20} className="mr-2" />
-                <h3 className="font-semibold">Kinematic Actions</h3>
-              </div>
-              <p className="mt-1 text-sm">
-                {quiz.showMitigation ? 'Available' : 'Not yet available'}
-              </p>
-            </div>
-          </div>
-        </div> */}
 
         {/* Question results */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -319,64 +281,83 @@ const QuizResult = () => {
                   </div>
 
                   {expandedQuestions[question._id] && (
-                    <div
-                      className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-8 py-4"
-                      initial="hidden"
-                      animate="show"
-                    >
-                      {question.options.map((option) => {
+                    <div className="flex flex-col">
+                      <div
+                        className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-8 py-4"
+                        initial="hidden"
+                        animate="show"
+                      >
+                        {question.options.map((option) => {
 
-                        return (
-                          <div
-                            key={option._id}
-                            className="border rounded-lg overflow-hidden"
-                          >
-                            <div className={`${getSeverityColor(option.isCorrect ? "low" : (userSelection === option._id ? 'high' : 'mediumm'))} border-b flex flex-row p-3`}>
-                              {option.isCorrect ? (
+                          return (
+                            <div
+                              key={option._id}
+                              className="border rounded-lg overflow-hidden"
+                            >
+                              <div className={`${getSeverityColor(option.isCorrect ? "low" : (userSelection === option._id ? 'high' : 'mediumm'))} border-b flex flex-row p-3`}>
+                                {option.isCorrect ? (
                                   <CheckCircle size={28} className='mr-2' />
                                 ) : (userSelection === option._id ? (
                                   <XCircle size={28} className='mr-2' />
                                 ) : (
                                   <div className="h-4 w-4 mr-2"></div>
                                 ))}
-                              <h4 className="font-medium text-gray-800">{option.text}</h4>
-                              {option.isCorrect && option.justification && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openJustificationModal(option.justification);
-                                  }}
-                                  className="ml-2 text-blue-500 hover:text-blue-700"
-                                >
-                                  <Info size={16} />
-                                </button>
-                              )}
+                                <h4 className="font-medium text-gray-800">{option.text}</h4>
+                                {option.isCorrect && option.justification && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openJustificationModal(option.justification);
+                                    }}
+                                    className="ml-2 text-blue-500 hover:text-blue-700"
+                                  >
+                                    <Info size={16} />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="p-4">
+                                {quiz.showImpact && (
+                                  <div className="mb-3">
+                                    <div className="flex items-center mb-1">
+                                      <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mr-2 ${getSeverityColor(option.isCorrect ? "low" : "high")}`}>
+                                        {getSeverityIcon(option.isCorrect ? "low" : "high")}
+                                        <span className="ml-1 capitalize">{option.isCorrect ? "low" : "high"} Impact</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-gray-700 text-sm">{option.impact}</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="p-4">
-                              {quiz.showImpact && (
-                              <div className="mb-3">
-                                <div className="flex items-center mb-1">
-                                  <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mr-2 ${getSeverityColor(option.isCorrect ? "low" : "high")}`}>
-                                    {getSeverityIcon(option.isCorrect ? "low" : "high")}
-                                    <span className="ml-1 capitalize">{option.isCorrect ? "low" : "high"} Impact</span>
+                          );
+                        })}
+                      </div>
+                      {quiz.showMitigation && (
+                        <div className='px-8 py-4 bg-gray-50 border-t'>
+                          <h5 className="text-sm font-semibold text-blue-800 mb-2">
+                            Kinematic Actions:
+                          </h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            {question.kinematicActions.map((ka, index) => (
+                              <div
+                                key={index}
+                                className="group relative bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 p-3 rounded-lg transition-all duration-200 hover:shadow-md"
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <div className="font-semibold text-blue-900 text-sm">
+                                    {ka.action}
+                                  </div>
+                                  <div className="text-blue-700 text-xs leading-relaxed">
+                                    {ka.description}
                                   </div>
                                 </div>
-                                <p className="text-gray-700 text-sm">{option.impact}</p>
+                                {/* Subtle accent border */}
+                                <div className="absolute inset-0 rounded-lg border-2 border-transparent group-hover:border-blue-300 transition-colors duration-200 pointer-events-none"></div>
                               </div>
-                              )}
-
-                              {quiz.showMitigation && (
-                              <div>
-                                <h5 className="text-sm font-medium text-gray-700 mb-1">Kinematic Actions:</h5>
-                                <p className="text-gray-600 text-sm bg-blue-50 p-2 rounded">
-                                  {option.mitigation}
-                                </p>
-                              </div>
-                              )}
-                            </div>
+                            ))}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

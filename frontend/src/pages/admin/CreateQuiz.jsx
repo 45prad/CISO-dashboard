@@ -1,9 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, X, Save, ArrowLeft, Upload, Trash2, CheckCircle, AlertCircle, Image, Video } from 'lucide-react';
+import { PlusCircle, X, Save, ArrowLeft, Upload, Trash2, CheckCircle, AlertCircle, Image, Video, Zap } from 'lucide-react';
 import axios from 'axios';
 import AdminHeader from '../../components/AdminHeader';
 import AuthContext from '../../context/AuthContext';
+import FileUploadSection from '../../components/Partials/FileUploadSection';
+import ErrorAlert from '../../components/Partials/ErrorAlert';
+import KinematicActionsSection from '../../components/Quiz/KinematicActions';
 
 const CreateQuiz = () => {
   const [title, setTitle] = useState('');
@@ -11,6 +14,7 @@ const CreateQuiz = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionText, setCurrentQuestionText] = useState('');
   const [currentQuestionMedia, setCurrentQuestionMedia] = useState({ imageFile: null, videoFile: null });
+  const [currentKinematicActions, setCurrentKinematicActions] = useState([{ action: '', description: '' }]);
   const [options, setOptions] = useState([
     { text: '', isCorrect: false, impact: '', mitigation: '', score: 0, justification: '', imageFile: null, videoFile: null }
   ]);
@@ -63,16 +67,24 @@ const CreateQuiz = () => {
       return setError('One option must be correct');
     }
 
+    // Validate kinematic actions - at least one action should have both action and description
+    const validKinematicActions = currentKinematicActions.filter(ka => ka.action.trim() && ka.description.trim());
+    if (validKinematicActions.length === 0) {
+      return setError('At least one kinematic action with both action and description is required');
+    }
+
     const newQuestion = {
       text: currentQuestionText,
       imageFile: currentQuestionMedia.imageFile,
       videoFile: currentQuestionMedia.videoFile,
+      kinematicActions: validKinematicActions,
       options: options.map(opt => ({ ...opt }))
     };
 
     setQuestions([...questions, newQuestion]);
     setCurrentQuestionText('');
     setCurrentQuestionMedia({ imageFile: null, videoFile: null });
+    setCurrentKinematicActions([{ action: '', description: '' }]);
     setOptions([{ text: '', isCorrect: false, impact: '', mitigation: '', justification: '', imageFile: null, videoFile: null }]);
     setError(null);
   };
@@ -102,6 +114,7 @@ const CreateQuiz = () => {
           text: q.text,
           imageName: q.imageFile ? `question-${qIndex}-${q.imageFile.name}` : null,
           videoName: q.videoFile ? `question-${qIndex}-${q.videoFile.name}` : null,
+          kinematicActions: q.kinematicActions,
           options: q.options.map((opt, oIndex) => ({
             text: opt.text,
             isCorrect: opt.isCorrect,
@@ -134,6 +147,8 @@ const CreateQuiz = () => {
       });
 
       formData.append('questions', JSON.stringify(payloadQuestions));
+      console.log(JSON.stringify(payloadQuestions));
+
 
       const res = await axios.post(`${backendUrl}/api/quizzes`, formData, {
         headers: {
@@ -150,36 +165,9 @@ const CreateQuiz = () => {
     }
   };
 
-  const FileUploadSection = ({ label, file, onChange, icon: Icon }) => (
-    <div className="relative">
-      <label className="flex items-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 cursor-pointer transition-colors">
-        <Icon size={20} className="text-gray-500" />
-        <span className="text-sm text-gray-600">{label}</span>
-        <input
-          type="file"
-          accept="image/png, image/jpeg, image/jpg, video/mp4, video/mov, video/avi, video/quicktime"
-          onChange={onChange}
-          className="hidden"
-        />
-      </label>
-      {file && (
-        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
-          <span className="text-sm text-green-700 truncate">{file.name}</span>
-          <button
-            onClick={() => onChange({ target: { files: [null] } })}
-            className="text-red-500 hover:text-red-700"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <AdminHeader />
-
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
@@ -192,21 +180,9 @@ const CreateQuiz = () => {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Create New Scenario</h1>
-              <p className="text-gray-600 mt-1">Design engaging Scenarioes with multimedia support</p>
+              <p className="text-gray-600 mt-1">Design engaging Scenarios with multimedia support</p>
             </div>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
-              <div className="flex">
-                <AlertCircle className="text-red-400 mr-3 mt-0.5" size={20} />
-                <div>
-                  <p className="text-red-800 font-medium">Error</p>
-                  <p className="text-red-700">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Scenario Details */}
           <div className="grid md:grid-cols-2 gap-6">
@@ -311,16 +287,6 @@ const CreateQuiz = () => {
                           rows="2"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Mitigation</label>
-                        <textarea
-                          value={opt.mitigation}
-                          onChange={(e) => handleOptionChange(i, 'mitigation', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Mitigation strategy..."
-                          rows="2"
-                        />
-                      </div>
                     </div>
 
                     <div className="grid lg:grid-cols-4 grid-cols-1 gap-4 mb-4">
@@ -343,7 +309,7 @@ const CreateQuiz = () => {
                           value={opt.justification}
                           onChange={(e) => handleOptionChange(i, 'justification', e.target.value)}
                           className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-green-50"
-                          placeholder="Explain why this is the correct ..."
+                          placeholder="Explain why this is the correct answer..."
                           rows="2"
                         />
                       </div>
@@ -366,6 +332,12 @@ const CreateQuiz = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Kinematic Actions Section */}
+              <KinematicActionsSection
+                initialActions={currentKinematicActions}
+                onChange={(actions) => setCurrentKinematicActions(actions)}
+              />
 
               <div className="flex gap-3 mt-4">
                 <button
@@ -406,6 +378,24 @@ const CreateQuiz = () => {
                       <Trash2 size={18} />
                     </button>
                   </div>
+
+                  {/* Kinematic Actions Preview */}
+                  {q.kinematicActions && q.kinematicActions.length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h5 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                        <Zap size={16} className="mr-1" />
+                        Kinematic Actions:
+                      </h5>
+                      <div className="space-y-2">
+                        {q.kinematicActions.map((ka, j) => (
+                          <div key={j} className="text-sm text-blue-700">
+                            <span className="font-medium">{ka.action}:</span> {ka.description}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-2">
                     {q.options.map((o, j) => (
                       <div key={j} className={`p-3 rounded-lg flex items-center gap-2 ${o.isCorrect ? 'bg-green-100 border border-green-300' : 'bg-gray-50 border border-gray-200'
@@ -420,6 +410,11 @@ const CreateQuiz = () => {
               ))}
             </div>
           </div>
+        )}
+
+
+        {error && (
+          <ErrorAlert title='Error' error={error}  />
         )}
 
         {/* Submit Button */}

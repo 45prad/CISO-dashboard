@@ -14,6 +14,7 @@ import userRoutes from './routes/users.js';
 import quizRoutes from './routes/quizzes.js';
 import submissionRoutes from './routes/submissions.js';
 import scoreboardRoutes from './routes/scoreboard.js';
+import QuizTimerRoutes from './routes/QuizTimer.js';
 
 // Import socket handler
 import setupSocketHandlers from './socket/socket.js';
@@ -52,6 +53,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/scoreboard', scoreboardRoutes);
+app.use('/api/quizTimer', QuizTimerRoutes);
 
 // serve media files
 app.get('/uploads/:type/:filename', protect, async (req, res) => {

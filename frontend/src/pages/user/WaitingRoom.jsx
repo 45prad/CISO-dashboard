@@ -8,6 +8,7 @@ import UserHeader from '../../components/UserHeader';
 import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
 import ScenarioSummary from '../../components/ScenarioSummary';
+import QuizTimerHeader from '../../components/Quiz/QuizTimerHeader';
 
 const WaitingRoom = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -172,6 +173,7 @@ const WaitingRoom = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <UserHeader />
+      <QuizTimerHeader quizId={quiz._id} />
 
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">

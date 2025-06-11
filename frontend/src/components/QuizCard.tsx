@@ -8,7 +8,8 @@ interface QuizCardProps {
     title: string;
     description: string;
     isActive: boolean;
-    questions: any[];
+    questionCount: number;
+    createdAt: string;
   };
   hasAttempted?: boolean;
   userView?: boolean;
@@ -41,7 +42,7 @@ const QuizCard: React.FC<QuizCardProps> = ({ quiz, hasAttempted = false, userVie
           {/* Meta Info */}
           <div className="flex items-center text-sm text-gray-500 mb-6">
             <Clock size={16} className="mr-1" />
-            <span>{quiz.questions.length} Situations</span>
+            <span>{quiz.questionCount} Situations</span>
             {hasAttempted && (
               <span className="ml-4 flex items-center text-green-600">
                 <CheckCircle size={16} className="mr-1" />

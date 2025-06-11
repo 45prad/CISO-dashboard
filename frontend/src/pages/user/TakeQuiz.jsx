@@ -6,6 +6,9 @@ import UserHeader from '../../components/UserHeader';
 import SocketContext from '../../context/SocketContext';
 import AuthContext from '../../context/AuthContext';
 import MediaPreview from '../../components/MediaPreview';
+import ErrorAlert from '../../components/Partials/ErrorAlert';
+import LoadingScreen from '../../components/Partials/Loading';
+import QuizTimerHeader from '../../components/Quiz/QuizTimerHeader';
 
 const TakeQuiz = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -36,8 +39,9 @@ const TakeQuiz = () => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleShowOptions = (data) => {
+    const handleShowOptions = async (data) => {
       if (data.quizId === id) {
+        await fetchQuiz(); 
         setQuiz(prev => prev ? { ...prev, showOptions: true } : prev);
       }
     };
@@ -50,9 +54,12 @@ const TakeQuiz = () => {
   }, [socket]);
 
   const navigate = useNavigate();
-
+  
   useEffect(() => {
-    const fetchQuiz = async () => {
+    fetchQuiz();
+  }, [id, navigate]);
+
+  const fetchQuiz = async () => {
       try {
         const { data } = await axios.get(`${backendUrl}/api/quizzes/${id}`);
 
@@ -79,9 +86,6 @@ const TakeQuiz = () => {
         setLoading(false);
       }
     };
-
-    fetchQuiz();
-  }, [id, navigate]);
 
   const handleOptionSelect = (questionId, optionId) => {
     setSelectedOptions({
@@ -137,19 +141,7 @@ const TakeQuiz = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <UserHeader />
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent"></div>
-              <div className="absolute inset-2 animate-pulse rounded-full bg-blue-100"></div>
-            </div>
-            <div className="text-gray-800 text-lg font-semibold">Loading Executive Assessment</div>
-            <div className="text-gray-600 text-sm">Preparing your strategic scenario...</div>
-          </div>
-        </div>
-      </div>
+      <LoadingScreen message='Preparing your strategic scenario...' />
     );
   }
 
@@ -189,17 +181,7 @@ const TakeQuiz = () => {
     return (
       <div className="min-h-screen bg-gray-100">
         <UserHeader />
-        <div className="container mx-auto px-4 py-6">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl shadow-md p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                <Target className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Scenario Not Found</h3>
-              <p className="text-gray-600">The requested assessment scenario could not be located.</p>
-            </div>
-          </div>
-        </div>
+        <ErrorAlert title='Scenario Not Found' error="The requested assessment scenario could not be located." />
       </div>
     );
   }
@@ -211,6 +193,7 @@ const TakeQuiz = () => {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <UserHeader />
+      <QuizTimerHeader quizId={quiz._id} />
 
       <div className="flex-1 container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

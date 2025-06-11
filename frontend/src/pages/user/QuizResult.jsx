@@ -6,6 +6,7 @@ import axios from 'axios';
 import UserHeader from '../../components/UserHeader';
 import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
+import QuizTimerHeader from '../../components/Quiz/QuizTimerHeader';
 
 const QuizResult = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -23,7 +24,22 @@ const QuizResult = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    fetchData();
+
+    // Join socket room
+    if (socket && user) {
+      joinQuizRoom(id);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (socket && user) {
+        leaveQuizRoom(id);
+      }
+    };
+  }, [id, user, socket, navigate, joinQuizRoom, leaveQuizRoom]);
+
+  const fetchData = async () => {
       try {
         // Fetch quiz and user submission
         const [quizRes, submissionsRes] = await Promise.all([
@@ -60,20 +76,6 @@ const QuizResult = () => {
       }
     };
 
-    fetchData();
-
-    // Join socket room
-    if (socket && user) {
-      joinQuizRoom(id);
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (socket && user) {
-        leaveQuizRoom(id);
-      }
-    };
-  }, [id, user, socket, navigate, joinQuizRoom, leaveQuizRoom]);
 
   // Listen for socket events
   useEffect(() => {
@@ -88,9 +90,9 @@ const QuizResult = () => {
     };
 
     // Listen for mitigation reveal
-    const handleShowMitigation = (data) => {
+    const handleShowMitigation = async (data) => {
       if (data.quizId === id) {
-        // Update quiz state
+        await fetchData();
         setQuiz(prev => prev ? { ...prev, showMitigation: true } : prev);
       }
     };
@@ -203,6 +205,7 @@ const QuizResult = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <UserHeader />
+      <QuizTimerHeader quizId={quiz._id} />
 
       {/* Justification Modal */}
       {modalOpen && (
@@ -338,7 +341,7 @@ const QuizResult = () => {
                             Kinematic Actions:
                           </h5>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                            {question.kinematicActions.map((ka, index) => (
+                            {question?.kinematicActions.map((ka, index) => (
                               <div
                                 key={index}
                                 className="group relative bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 p-3 rounded-lg transition-all duration-200 hover:shadow-md"

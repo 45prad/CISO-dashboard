@@ -107,6 +107,21 @@ const setupSocketHandlers = (io) => {
         console.error('Error showing summary:', error);
       }
     });
+
+    socket.on('refreshQuiz', async ({ quizId }) => {
+      try {
+        // Fetch the latest quiz data from the database
+        const quiz = await Quiz.findById(quizId);
+        if (quiz) {
+          // Emit the updated quiz data to all users in the room
+          io.to(quizId).emit('quizUpdated', { quiz });
+          console.log(`Quiz ${quizId} refreshed and sent to room`);
+        }
+      } catch (error) {
+        console.error('Error refreshing quiz:', error);
+      } 
+    });
+
     // Admin triggers show mitigation
     socket.on('adminShowMitigation', async ({ quizId }) => {
       try {

@@ -7,6 +7,7 @@ import AdminHeader from '../../components/AdminHeader';
 import SocketContext from '../../context/SocketContext';
 import ScenarioSummary from '../../components/ScenarioSummary';
 import ResponseStats from '../../components/ResponseStats';
+import TimerSetter from '../../components/Quiz/TimerSetter';
 
 const QuizMonitor = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -33,6 +34,7 @@ const QuizMonitor = () => {
     adminShowMitigation,
     adminShowSummary,
     adminShowOptions,
+    refreshQuiz
   } = useContext(SocketContext);
 
   const navigate = useNavigate();
@@ -287,7 +289,7 @@ const QuizMonitor = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <Users size={24} className="text-blue-600 mr-2" />
@@ -341,6 +343,7 @@ const QuizMonitor = () => {
               </div>
             </div>
           </div>
+          <TimerSetter quizId={quiz._id} onRefresh={refreshQuiz} />
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
@@ -458,61 +461,6 @@ const QuizMonitor = () => {
             />
           ))
         )}
-
-
-
-        {/* <div className="bg-white rounded-lg shadow-md overflow-hidden mt-8">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">Scenario Submissions</h3>
-          </div>
-
-          {submissions.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              No submissions yet
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Submission Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {submissions.map(submission => (
-                  <tr key={submission._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {getUserName(submission.user._id)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {submission.user.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {submission.score} / {quiz.questions.length}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {Math.round((submission.score / quiz.questions.length) * 100)}%
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(submission.submittedAt).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div> */}
       </main>
     </div>
   );

@@ -89,16 +89,27 @@ router.get('/assigned', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('assignedQuizzes');
 
-    if (user) {
-      res.json(user.assignedQuizzes);
-    } else {
-      res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // Transform quizzes to exclude questions but include length
+    const quizzes = user.assignedQuizzes.map((quiz) => ({
+      _id: quiz._id,
+      title: quiz.title,
+      description: quiz.description,
+      isActive: quiz.isActive,
+      createdAt: quiz.createdAt,
+      questionCount: quiz.questions?.length || 0,
+    }));
+
+    res.json(quizzes);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // @route   GET /api/quizzes/:id
 // @desc    Get quiz by ID
@@ -107,24 +118,78 @@ router.get('/:id', protect, async (req, res) => {
   try {
     const quiz = await Quiz.findById(req.params.id);
 
-    if (quiz) {
-      // If user is not admin, check if quiz is assigned to them
-      if (req.user.role !== 'admin') {
-        const user = await User.findById(req.user._id);
-        if (!user.assignedQuizzes.includes(quiz._id)) {
-          return res.status(403).json({ message: 'Not authorized to access this quiz' });
-        }
-      }
-
-      res.json(quiz);
-    } else {
-      res.status(404).json({ message: 'Quiz not found' });
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
     }
+
+    // Admin: Return full quiz
+    if (req.user.role === 'admin') {
+      return res.json(quiz);
+    }
+
+    // User: Check if quiz is assigned to them
+    const user = await User.findById(req.user._id);
+    const isAssigned = user.assignedQuizzes.includes(quiz._id);
+
+    if (!isAssigned) {
+      return res.status(403).json({ message: 'Not authorized to access this quiz' });
+    }
+
+    // Construct filtered quiz object based on visibility flags
+    const filteredQuiz = {
+      _id: quiz._id,
+      title: quiz.title,
+      description: quiz.description,
+      isActive: quiz.isActive,
+      createdAt: quiz.createdAt,
+      showOptions: quiz.showOptions,
+      showImpact: quiz.showImpact,
+      showMitigation: quiz.showMitigation,
+      showSummary: quiz.showSummary,
+      questions: quiz.questions.map(q => {
+        const base = {
+          _id: q._id,
+          text: q.text,
+          imageUrl: q.imageUrl,
+          videoUrl: q.videoUrl,
+        };
+
+        if (!quiz.showOptions) return base;
+
+        const withOptions = {
+          ...base,
+          options: q.options.map(opt => ({
+            _id: opt._id,
+            text: opt.text,
+            imageUrl: opt.imageUrl,
+            videoUrl: opt.videoUrl,
+          }))
+        };
+
+        if (!quiz.showImpact) return withOptions;
+
+        const withImpact = {
+          ...base,
+          options: q.options // full options with impact details
+        };
+
+        if (!quiz.showMitigation) return withImpact;
+
+        return {
+          ...withImpact,
+          kinematicActions: q.kinematicActions
+        };
+      })
+    };
+
+    return res.json(filteredQuiz);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // @route   PUT /api/quizzes/:id
 // @desc    Update quiz

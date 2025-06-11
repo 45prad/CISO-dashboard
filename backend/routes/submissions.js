@@ -173,6 +173,7 @@ router.get('/user', protect, async (req, res) => {
   try {
     const submissions = await Submission.find({ user: req.user._id })
       .populate('quiz', 'title description')
+      .select('-user -score')
       .sort({ submittedAt: -1 });
     
     res.json(submissions);

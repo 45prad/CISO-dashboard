@@ -12,6 +12,7 @@ interface SocketContextType {
   adminDeactivateQuiz: (quizId: string) => void;
   adminShowSummary: (quizId: string) => void;
   adminShowOptions: (quizId: string) => void;
+  refreshQuiz: (quizId: string) => void;
 }
 
 export const SocketContext = createContext<SocketContextType>({
@@ -24,6 +25,7 @@ export const SocketContext = createContext<SocketContextType>({
   adminDeactivateQuiz: () => { },
   adminShowSummary: () => { },
   adminShowOptions: () => { },
+  refreshQuiz: () => { },
 });
 
 interface SocketProviderProps {
@@ -73,6 +75,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshQuiz = (quizId: string) => {
+    if (socket && user && user.role === 'admin') {
+      socket.emit('refreshQuiz', { quizId });
+    }
+  };
+
   const adminShowOptions = (quizId: string) => {
     if (socket && user && user.role === 'admin') {
       socket.emit('adminShowOptions', { quizId });
@@ -113,7 +121,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       adminActivateQuiz,
       adminDeactivateQuiz,
       adminShowSummary,
-      adminShowOptions
+      adminShowOptions,
+      refreshQuiz
     }}>
       {children}
     </SocketContext.Provider>

@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -71,6 +72,20 @@ router.post('/register', async (req, res) => {
     } else {
       res.status(400).json({ message: 'Invalid user data' });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/user', protect, async (req, res) => {
+  try {
+    res.json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

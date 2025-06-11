@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Set default auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${parsedUser.token}`;
+      fetchUser();
     }
     
     setLoading(false);
@@ -84,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Set default auth header
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      
+
       setLoading(false);
     } catch (err: any) {
       setLoading(false);
@@ -99,6 +100,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Remove auth header
     delete axios.defaults.headers.common['Authorization'];
   };
+
+  const fetchUser = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const token = localStorage.getItem('user') 
+      ? JSON.parse(localStorage.getItem('user')!).token 
+      : null;
+
+    const { data } = await axios.get(`${backendUrl}/api/auth/user`);
+
+    if (token) {
+      setUser({
+        ...data,
+        token, // manually attach the token
+      });
+      localStorage.setItem('user', JSON.stringify({ ...data, token }));
+    }
+
+    setLoading(false);
+  } catch (err: any) {
+    console.error('Failed to fetch user', err);
+    logout(); // token may be invalid
+    setLoading(false);
+  }
+};
+
+
 
   return (
     <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>

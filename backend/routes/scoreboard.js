@@ -8,7 +8,7 @@ const router = express.Router();
 // @route   GET /api/scoreboard
 // @desc    Get scoreboard of all users with their total correct answers
 // @access  Private/Admin
-router.get('/', async (req, res) => {
+router.get('/', protect, admin, async (req, res) => {
   try {
     const users = await User.find({ role: 'user' }).select('name email role');
 

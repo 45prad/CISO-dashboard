@@ -175,8 +175,11 @@ router.get('/user', protect, async (req, res) => {
       .populate('quiz', 'title description')
       .select('-user -score')
       .sort({ submittedAt: -1 });
-    
-    res.json(submissions);
+
+    // Filter out submissions where quiz is null (i.e., missing/deleted quiz)
+    const filtered = submissions.filter(sub => sub.quiz !== null);
+
+    res.json(filtered);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

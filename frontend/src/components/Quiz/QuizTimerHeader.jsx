@@ -39,7 +39,7 @@ const QuizTimerHeader = ({ quizId }) => {
     const handleRefreshQuiz = async (data) => {
       console.log('Received quiz update:', data);
       
-      if (data.quizId === quizId) {
+      if (data.quiz._id === quizId) {
         await fetchTimeLeft();
       }
   };

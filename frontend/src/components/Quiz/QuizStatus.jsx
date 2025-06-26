@@ -27,6 +27,10 @@ const QuizStatusDashboard = ({ quizId }) => {
         };
 
         fetchData();
+
+        const intervalId = setInterval(fetchData, 60000); // 1 minute = 60000 ms
+
+        return () => clearInterval(intervalId);
     }, [quizId, backendUrl]);
 
     const formatDate = (dateString) => {

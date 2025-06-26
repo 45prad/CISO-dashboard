@@ -1,55 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import { useContext } from 'react';
+import { useParams } from 'react-router-dom';
 import SocketContext from '../../context/SocketContext';
 import AuthContext from '../../context/AuthContext';
-import { useParams } from 'react-router-dom';
 
 const QuizTimerHeader = ({ quizId }) => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
   const { id } = useParams();
-    const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
+  const { socket, joinQuizRoom, leaveQuizRoom } = useContext(SocketContext);
+
   const [timeLeft, setTimeLeft] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const [loading, setLoading] = useState(true);const { socket, joinQuizRoom, leaveQuizRoom } = useContext(SocketContext);
-  
-    useEffect(() => {
-      // Join socket room
-      if (socket && user) {
-        joinQuizRoom(id);
-      }
-  
-      return () => {
-        if (socket && user) {
-          leaveQuizRoom(id);
-        }
-      };
-    }, [id, socket, joinQuizRoom]);
-  
-    useEffect(() => {
-      if (!socket) return;
-  
-      socket.on('quizUpdated', handleRefreshQuiz);
-  
-      return () => {
-        socket.off('quizUpdated', handleRefreshQuiz);
-      };
-    }, [socket]);
+  // Join socket room
+  useEffect(() => {
+    if (socket && user) joinQuizRoom(id);
+    return () => { if (socket && user) leaveQuizRoom(id); };
+  }, [id, socket]);
 
-    const handleRefreshQuiz = async (data) => {
-      console.log('Received quiz update:', data);
-      
-      if (data.quiz._id === quizId) {
-        await fetchTimeLeft();
-      }
+  // Listen to quiz updates
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('quizUpdated', handleRefreshQuiz);
+    return () => socket.off('quizUpdated', handleRefreshQuiz);
+  }, [socket]);
+
+  const handleRefreshQuiz = async (data) => {
+    if (data.quiz._id === quizId) await fetchTimeLeft();
   };
 
+  // Fetch initial timer
   const fetchTimeLeft = async () => {
-    try {      
-      const response = await axios.get(`${backendUrl}/api/quizTimer/timeleft/${quizId}`);
-      console.log('Time left data:', response.data?.timeLeft);
-      
-      setTimeLeft(response?.data?.timeLeft);
+    try {
+      const res = await axios.get(`${backendUrl}/api/quizTimer/timeleft/${quizId}`);
+      console.log('Fetched time:', res.data);
+      setTimeLeft(res.data?.timeLeft);
+      setIsPaused(res.data?.isPaused);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching time left:', error);
@@ -57,16 +45,20 @@ const QuizTimerHeader = ({ quizId }) => {
     }
   };
 
+  // Countdown (if not paused)
   useEffect(() => {
     if (!quizId) return;
-    
     fetchTimeLeft();
+
     const interval = setInterval(() => {
-      setTimeLeft(prev => Math.max(0, prev - 1000));
+      setTimeLeft(prev => {
+        if (isPaused || prev <= 0) return prev;
+        return Math.max(0, prev - 1000);
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [quizId]);
+  }, [quizId, isPaused]);
 
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -74,15 +66,14 @@ const QuizTimerHeader = ({ quizId }) => {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    if (hours > 0) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return hours > 0
+      ? `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      : `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const getTimerColor = () => {
-    if (timeLeft <= 60000) return 'text-red-500'; // Less than 1 minute
-    if (timeLeft <= 300000) return 'text-yellow-500'; // Less than 5 minutes
+    if (timeLeft <= 60000) return 'text-red-500';
+    if (timeLeft <= 300000) return 'text-yellow-500';
     return 'text-green-500';
   };
 
@@ -96,13 +87,13 @@ const QuizTimerHeader = ({ quizId }) => {
     );
   }
 
-  if (timeLeft <= 0) return null;
+  if (timeLeft <= 0 && !isPaused) return null;
 
   return (
     <div className="px-6 py-4">
       <div className="flex justify-end items-center">
         <div className={`text-2xl font-mono font-bold ${getTimerColor()}`}>
-          {timeLeft <= 0 ? 'Time\'s Up!' : 'Time Left - '+formatTime(timeLeft)}
+          {isPaused ? `⏸️ Paused - ${formatTime(timeLeft)}` : `⏱️ Time Left - ${formatTime(timeLeft)}`}
         </div>
       </div>
     </div>

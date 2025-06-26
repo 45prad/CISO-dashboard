@@ -14,6 +14,17 @@ const QuizTimerSchema = new mongoose.Schema({
   duration: {
     type: Number, // in milliseconds
     required: true
+  },
+  isPaused: {
+    type: Boolean,
+    default: false
+  },
+  pausedAt: {
+    type: Date
+  },
+  elapsedBeforePause: {
+    type: Number, // in milliseconds
+    default: 0
   }
 });
 

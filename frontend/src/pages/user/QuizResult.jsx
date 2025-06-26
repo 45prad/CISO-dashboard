@@ -7,6 +7,7 @@ import UserHeader from '../../components/UserHeader';
 import AuthContext from '../../context/AuthContext';
 import SocketContext from '../../context/SocketContext';
 import QuizTimerHeader from '../../components/Quiz/QuizTimerHeader';
+import ErrorAlert from '../../components/Partials/ErrorAlert';
 
 const QuizResult = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -231,6 +232,15 @@ const QuizResult = () => {
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!quiz || !quiz.isActive) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <UserHeader />
+        <ErrorAlert title='Scenario Not Found' error="The requested assessment scenario could not be located." />
       </div>
     );
   }

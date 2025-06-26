@@ -131,7 +131,7 @@ const ScenarioSummary = ({ summaryData, labeledSummaryData }) => {
                     )}
 
                     <p className="text-gray-500 text-sm mt-4 text-center">
-                        Distribution of answers selected by all participants
+                        Distribution of decisions selected by all delegates
                     </p>
                 </div>
             </div>

@@ -177,7 +177,7 @@ const TakeQuiz = () => {
     );
   }
 
-  if (!quiz) {
+  if (!quiz || !quiz.isActive) {
     return (
       <div className="min-h-screen bg-gray-100">
         <UserHeader />

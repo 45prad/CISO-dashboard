@@ -215,9 +215,9 @@ const TakeQuiz = () => {
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="p-6">
 
-                <h2 className="text-md text-gray-900 leading-tight mb-6">
+                {/* <h2 className="text-md text-gray-900 leading-tight mb-6">
                   {currentQuestion.text}
-                </h2>
+                </h2> */}
                 <div className="flex flex-row items-center justify-center overflow-x-auto mb-6">
                   {currentQuestion.imageUrl &&
                     <MediaPreview filepath={currentQuestion.imageUrl} />
@@ -299,8 +299,8 @@ const TakeQuiz = () => {
                       <EyeOff className="h-5 w-5 text-yellow-600 mt-0.5" />
                       <div>
                         <p className="text-yellow-800">
-                          <span className="font-medium">Facilitator Note:</span> Response options will be revealed after the discussion period.
-                          Allow participants time to review the scenario and discuss initial thoughts before proceeding to response options.
+                          <span className="font-medium">Moderator Note:</span> Response options will be revealed after the discussion period.
+                          Allow delegates time to review the scenario and discuss initial thoughts before proceeding to response options.
                         </p>
                       </div>
                     </div>
@@ -335,7 +335,7 @@ const TakeQuiz = () => {
                   }`}
               >
                 <ArrowLeft size={18} className="mr-2" />
-                Previous Question
+                Previous Scenario
               </button>
 
               <div className="flex items-center space-x-4">

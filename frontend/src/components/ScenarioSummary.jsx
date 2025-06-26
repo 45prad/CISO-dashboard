@@ -62,7 +62,7 @@ const ScenarioSummary = ({ summaryData, labeledSummaryData }) => {
                             <h4 className="text-sm font-medium text-purple-800">Best Fit Decison</h4>
                         </div>
                         <p className="text-2xl font-bold text-purple-900">
-                            {labeledSummaryData.find(item => item.count === maxCount)?.shortLabel || 'N/A'}
+                            {labeledSummaryData.find(item => item.isCorrect)?.shortLabel || 'N/A'}
                         </p>
                     </div>
                 </div>

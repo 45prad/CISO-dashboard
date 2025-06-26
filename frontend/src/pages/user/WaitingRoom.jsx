@@ -1,7 +1,7 @@
 // WaitingRoom.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, ArrowLeft, MessageSquare, Users, BarChart2 } from 'lucide-react';
+import { Clock, ArrowLeft, MessageSquare, Users, BarChart2, AlertTriangleIcon } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import UserHeader from '../../components/UserHeader';
@@ -189,7 +189,7 @@ const WaitingRoom = () => {
 
             <h2 className="text-xl font-semibold mb-2">Your Scenario Has Been Submitted!</h2>
             <p className="text-gray-600 mb-6">
-              Please wait while the instructor reveals the results. The page will update automatically.
+              Please wait while the moderator reveals the results. The page will update automatically.
             </p>
 
             {/* <div className="flex items-center justify-center mb-4">
@@ -199,7 +199,7 @@ const WaitingRoom = () => {
 
             {quiz.showImpact ? (
               <div className="bg-blue-100 text-blue-800 p-4 rounded-md mb-4">
-                Impact explanations are now available! Waiting for Kinematic Actions ...
+                Risk Ratings are now available! Waiting for Kinematic Actions ...
               </div>
             ) : (
               <div className="flex items-center justify-center mt-2 mb-4">
@@ -259,8 +259,8 @@ const WaitingRoom = () => {
                   onClick={() => navigate(`/quiz/${id}/result`)}
                   className="flex items-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  View Impact
-                  <MessageSquare size={18} className="ml-2" />
+                  View Risk Ratings
+                  <AlertTriangleIcon size={18} className="ml-2" />
                 </button>
               )}
             </div>

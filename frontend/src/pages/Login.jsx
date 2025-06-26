@@ -18,7 +18,6 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("hello");
     
     if (!email || !password) {
       setLocalError('Please fill in all fields');
@@ -44,28 +43,28 @@ const Login = () => {
         </div>
         
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-12 py-16 text-white">
+        <div className="relative z-10 flex flex-col justify-center items-center px-12 py-16 text-white text-center">
           <div className="max-w-md">
             {/* Logo */}
             <div className="mb-8">
               <img
                 src="/CS25_White_Logo.png-1748334152897-826258387.png"
                 alt="Logo"
-                className="h-16 w-auto mb-4"
+                className="h-20 w-auto mb-6 mx-auto"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
-              <div className="hidden items-center justify-center w-16 h-16 bg-white bg-opacity-20 rounded-xl mb-4">
-                <BookOpen className="h-8 w-8 text-white" />
+              <div className="hidden items-center justify-center w-20 h-20 bg-white bg-opacity-20 rounded-xl mb-6 mx-auto">
+                <BookOpen className="h-10 w-10 text-white" />
               </div>
-              <h1 className="text-4xl font-bold mb-2">TTX Platform</h1>
+              <h1 className="text-3xl font-bold mb-2">TTX Platform</h1>
               <p className="text-xl text-blue-200">Prepare. Respond. Improve.</p>
             </div>
 
             {/* Features */}
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
               <div className="flex items-start space-x-4">
                 <div className="flex-shrink-0 w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
                   <Shield className="h-6 w-6 text-white" />
@@ -122,13 +121,18 @@ const Login = () => {
             <div className="hidden items-center justify-center w-12 h-12 mx-auto mb-3" style={{ backgroundColor: '#00174D' }}>
               <BookOpen className="h-6 w-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold" style={{ color: '#00174D' }}>TTX Platform</h2>
+            <h2 className="text-2xl font-bold mb-1" style={{ color: '#00174D' }}>TTX Platform</h2>
+            <p className="text-lg font-semibold text-gray-700">CISO'S CONCLAVE 2025</p>
           </div>
 
           {/* Form Header */}
           <div className="text-center lg:text-left mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
+            <h2 className="text-3xl font-bold text-gray-900">Welcome</h2>
             <p className="mt-2 text-lg text-gray-600">Sign in to your account</p>
+            {/* CISO's Conclave 2025 for desktop */}
+            <div className="hidden lg:block mt-3">
+              <p className="text-2xl font-bold" style={{ color: '#00174D' }}>CISO'S CONCLAVE 2025</p>
+            </div>
           </div>
 
           {/* Error Message */}

@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Quiz from '../models/Quiz.js';
 import User from '../models/User.js';
 import { protect, admin } from '../middleware/auth.js';
@@ -202,25 +203,23 @@ router.put('/:id', protect, admin, upload.fields([
     const { title, description, questions: rawQuestions, assignedUsers, isActive } = req.body;
 
     const quiz = await Quiz.findById(req.params.id);
-    if (!quiz) {
-      return res.status(404).json({ message: 'Quiz not found' });
-    }
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
 
-    // Parse questions JSON if provided
-    let questions = quiz.questions;
+    const questionMedia = req.files['questionMedia'] || [];
+    const optionMedia = req.files['optionMedia'] || [];
+
+    const getFileUrlByOriginalName = (files, originalName) => {
+      const match = files.find(f => f.originalname === originalName);
+      return match ? `/uploads/quiz/${match.filename}` : null;
+    };
+
+    let updatedQuestions = quiz.questions;
+
     if (rawQuestions) {
       const parsedQuestions = JSON.parse(rawQuestions);
 
-      const questionMedia = req.files['questionMedia'] || [];
-      const optionMedia = req.files['optionMedia'] || [];
-
-      const getFileUrlByOriginalName = (files, originalName) => {
-        const match = files.find(f => f.originalname === originalName);
-        return match ? `/uploads/quiz/${match.filename}` : null;
-      };
-
-      questions = parsedQuestions.map((q, qIndex) => {
-        const oldQuestion = quiz.questions[qIndex] || {};
+      updatedQuestions = parsedQuestions.map((q) => {
+        const oldQuestion = quiz.questions.find(qOld => qOld._id?.toString() === q._id) || {};
 
         const imageUrl = q.imageName
           ? getFileUrlByOriginalName(questionMedia, q.imageName) || oldQuestion.imageUrl
@@ -230,11 +229,16 @@ router.put('/:id', protect, admin, upload.fields([
           ? getFileUrlByOriginalName(questionMedia, q.videoName) || oldQuestion.videoUrl
           : oldQuestion.videoUrl;
 
-        const options = q.options.map((opt, oIndex) => {
-          const oldOption = oldQuestion.options?.[oIndex] || {};
+        const options = q.options.map((opt) => {
+          const oldOption = oldQuestion.options?.find(o => o._id?.toString() === opt._id) || {};
 
           return {
-            ...opt,
+            _id: oldOption._id || new mongoose.Types.ObjectId(),
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+            impact: opt.impact,
+            justification: opt.justification,
+            score: opt.score || 0,
             imageUrl: opt.imageName
               ? getFileUrlByOriginalName(optionMedia, opt.imageName) || oldOption.imageUrl
               : oldOption.imageUrl,
@@ -244,13 +248,17 @@ router.put('/:id', protect, admin, upload.fields([
           };
         });
 
-        
-      const kinematicActions = q.kinematicActions.map((action) => ({
-        action: action.action,
-        description: action.description,
-      }));
+        const kinematicActions = (q.kinematicActions || []).map((action) => {
+          const oldAction = oldQuestion.kinematicActions?.find(a => a._id?.toString() === action._id) || {};
+          return {
+            _id: oldAction._id || new mongoose.Types.ObjectId(),
+            action: action.action,
+            description: action.description,
+          };
+        });
 
         return {
+          _id: oldQuestion._id || new mongoose.Types.ObjectId(),
           text: q.text,
           imageUrl,
           videoUrl,
@@ -260,40 +268,31 @@ router.put('/:id', protect, admin, upload.fields([
       });
     }
 
-    // Update quiz fields (fall back to existing values if not provided)
+    // Update fields
     quiz.title = title || quiz.title;
     quiz.description = description || quiz.description;
-    quiz.questions = questions;
+    quiz.questions = updatedQuestions;
     quiz.assignedUsers = assignedUsers || quiz.assignedUsers;
 
-    if (isActive !== undefined) {
+    if (typeof isActive !== 'undefined') {
       quiz.isActive = isActive;
     }
 
     const updatedQuiz = await quiz.save();
 
-    // Update users' assignedQuizzes if assignedUsers provided
+    // Update assignedUsers
     if (assignedUsers) {
-      // Remove quiz from all users who had it assigned
-      await User.updateMany(
-        { assignedQuizzes: quiz._id },
-        { $pull: { assignedQuizzes: quiz._id } }
-      );
-
-      // Add quiz to specified users
-      await User.updateMany(
-        { _id: { $in: assignedUsers } },
-        { $addToSet: { assignedQuizzes: quiz._id } }
-      );
+      await User.updateMany({ assignedQuizzes: quiz._id }, { $pull: { assignedQuizzes: quiz._id } });
+      await User.updateMany({ _id: { $in: assignedUsers } }, { $addToSet: { assignedQuizzes: quiz._id } });
     }
 
     res.json(updatedQuiz);
-
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error('Update Quiz Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 // @route   DELETE /api/quizzes/:id

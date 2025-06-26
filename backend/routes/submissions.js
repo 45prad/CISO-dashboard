@@ -25,7 +25,8 @@ router.get('/summary/:quizId', async (req, res) => {
     quiz.questions[0].options.forEach(option => {
       optionCounts[option._id] = {
         optionText: option.text,
-        count: 0
+        count: 0,
+        isCorrect: option.isCorrect
       };
     });
     

@@ -142,49 +142,64 @@ const EditQuiz = () => {
   };
 
   const handleSave = async () => {
-    if (!title || !description) {
-      setError('Title and description are required');
-      return;
-    }
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    const preparedQuestions = questions.map((q, qIndex) => {
-      q.kinematicActions = q.kinematicActions || [];
-      const media = mediaMap[qIndex] || {};
-      if (media.imageName) q.imageName = media.imageName;
-      if (media.videoName) q.videoName = media.videoName;
-      q.options = q.options.map((opt, oIndex) => {
-        if (media.optionImageNames && media.optionImageNames[oIndex])
-          opt.imageName = media.optionImageNames[oIndex];
-        if (media.optionVideoNames && media.optionVideoNames[oIndex])
-          opt.videoName = media.optionVideoNames[oIndex];
-        return opt;
-      });
-      return q;
+  if (!title || !description) {
+    setError('Title and description are required');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', description);
+
+  const preparedQuestions = questions.map((q, qIndex) => {
+    const media = mediaMap[qIndex] || {};
+
+    return {
+      _id: q._id, // Preserve question ID
+      text: q.text,
+      imageName: media.imageName || q.imageName,
+      videoName: media.videoName || q.videoName,
+      options: q.options.map((opt, oIndex) => ({
+        _id: opt._id, // Preserve option ID
+        text: opt.text,
+        isCorrect: opt.isCorrect,
+        impact: opt.impact,
+        justification: opt.justification,
+        score: opt.score,
+        imageName: media.optionImageNames?.[oIndex],
+        videoName: media.optionVideoNames?.[oIndex]
+      })),
+      kinematicActions: (q.kinematicActions || []).map(action => ({
+        _id: action._id, // Preserve kinematicAction ID
+        action: action.action,
+        description: action.description
+      }))
+    };
+  });
+
+  formData.append('questions', JSON.stringify(preparedQuestions));
+
+  // Append files
+  Object.values(mediaMap).forEach(media => {
+    if (media.imageFile) formData.append('questionMedia', media.imageFile);
+    if (media.videoFile) formData.append('questionMedia', media.videoFile);
+    media.optionImages?.forEach(file => file && formData.append('optionMedia', file));
+    media.optionVideos?.forEach(file => file && formData.append('optionMedia', file));
+  });
+
+  try {
+    setSaving(true);
+    await axios.put(`${backendUrl}/api/quizzes/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
-    formData.append('questions', JSON.stringify(preparedQuestions));
-    // Append files
-    Object.values(mediaMap).forEach(media => {
-      if (media.imageFile) formData.append('questionMedia', media.imageFile);
-      if (media.videoFile) formData.append('questionMedia', media.videoFile);
-      media.optionImages?.forEach(file => file && formData.append('optionMedia', file));
-      media.optionVideos?.forEach(file => file && formData.append('optionMedia', file));
-    });
-    try {
-      setSaving(true);
-      await axios.put(`${backendUrl}/api/quizzes/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      setSaving(false);
-      navigate('/admin');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update quiz');
-      setSaving(false);
-    }
-  };
+    setSaving(false);
+    navigate('/admin');
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to update quiz');
+    setSaving(false);
+  }
+};
+
 
   const handleDelete = async () => {
     const confirm = window.confirm('Are you sure you want to delete this Scenario?');

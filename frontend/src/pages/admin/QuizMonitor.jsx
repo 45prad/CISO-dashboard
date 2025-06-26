@@ -330,7 +330,7 @@ const QuizMonitor = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Show Impact:</span>
+                <span className="text-gray-600">Show Risk Ratings:</span>
                 <span className={`font-semibold ${quiz.showImpact ? 'text-green-600' : 'text-red-600'}`}>
                   {quiz.showImpact ? 'Visible' : 'Hidden'}
                 </span>
@@ -409,12 +409,12 @@ const QuizMonitor = () => {
                 {quiz.showImpact ? (
                   <>
                     <EyeOff size={18} className="mr-2" />
-                    Hide Impact
+                    Hide Risk Ratings
                   </>
                 ) : (
                   <>
                     <Eye size={18} className="mr-2" />
-                    Show Impact
+                    Show Risk Ratings
                   </>
                 )}
               </button>

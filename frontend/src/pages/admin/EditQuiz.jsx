@@ -218,6 +218,12 @@ const EditQuiz = () => {
     setQuestions(updated);
   };
 
+  const handleQuestionTextChange = (qIndex, newText) => {
+    const updated = [...questions];
+    updated[qIndex].text = newText;
+    setQuestions(updated);
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -291,13 +297,25 @@ const EditQuiz = () => {
           {questions.map((q, qIndex) => (
             <div key={qIndex} className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex flex-row justify-between w-full">
-                <div className="flex flex-col items-start gap-3 mb-6">
-                  <div className="flex flex-row">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div className="flex flex-col gap-3 mb-6 w-full">
+                  <div className="flex items-start gap-4">
+                    {/* Question number badge */}
+                    <div className="w-8 h-8 mt-2 bg-blue-100 rounded-lg flex items-center justify-center">
                       <span className="text-sm font-semibold text-blue-700">{qIndex + 1}</span>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">{q.text}</h3>
+
+                    {/* Textarea */}
+                    <div className="flex-1">
+                      <textarea
+                        value={q.text}
+                        onChange={(e) => handleQuestionTextChange(qIndex, e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="Enter question text..."
+                        rows="3"
+                      />
+                    </div>
                   </div>
+
                   <div className="flex flex-row">
                     {q.imageUrl && (
                       <MediaPreview filepath={q.imageUrl} />

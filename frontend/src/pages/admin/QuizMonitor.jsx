@@ -8,6 +8,7 @@ import SocketContext from '../../context/SocketContext';
 import ScenarioSummary from '../../components/ScenarioSummary';
 import ResponseStats from '../../components/ResponseStats';
 import TimerSetter from '../../components/Quiz/TimerSetter';
+import QuizStatusDashboard from '../../components/Quiz/QuizStatus';
 
 const QuizMonitor = () => {
   const backendUrl = import.meta.env.VITE_BACKENDURL;
@@ -444,6 +445,8 @@ const QuizMonitor = () => {
             </div>
           </div>
         </div>
+
+        {quiz && <QuizStatusDashboard quizId={quiz._id} />}
 
         {quiz.showSummary && summaryData.length > 0 && (
           <ScenarioSummary

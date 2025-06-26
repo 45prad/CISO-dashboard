@@ -4,6 +4,7 @@ import Quiz from '../models/Quiz.js';
 import User from '../models/User.js';
 import { protect, admin } from '../middleware/auth.js';
 import createUploadMiddleware from '../utils/uploadUtils.js';
+import Submission from '../models/Submission.js';
 
 const router = express.Router();
 
@@ -107,6 +108,50 @@ router.get('/assigned', protect, async (req, res) => {
     res.json(quizzes);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/quiz/:quizId/assigned-status',protect, async (req, res) => {
+  try {
+    const { quizId } = req.params;
+
+    // Validate quiz existence
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+    // Get all users assigned to this quiz
+    const assignedUsers = await User.find({ assignedQuizzes: quizId });
+
+    // Get all submissions for this quiz
+    const submissions = await Submission.find({ quiz: quizId });
+
+    // Create a lookup map from userId to submission info
+    const submissionMap = new Map();
+    submissions.forEach(sub => {
+      submissionMap.set(sub.user.toString(), {
+        submitted: true,
+        score: sub.score || 0,
+        submittedAt: sub.submittedAt
+      });
+    });
+
+    // Build result list
+    const results = assignedUsers.map(user => {
+      const userSub = submissionMap.get(user._id.toString());
+      return {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        submitted: !!userSub,
+        score: userSub?.score || 0,
+        submittedAt: userSub?.submittedAt || null
+      };
+    });
+
+    res.json(results);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
